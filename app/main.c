@@ -2,18 +2,22 @@
 #include <string.h>
 
 int main() {
-  // Flush after every printf
-  setbuf(stdout, NULL);
 
-  // Uncomment this block to pass the first stage
-  printf("$ ");
-
-  // Wait for user input
   char input[100];
-  fgets(input, 100, stdin);
 
-  input[strlen(input) - 1] = '\0';
-  printf("%s: command not found\n",input);
+  do{
+    // Flush after every printf
+    setbuf(stdout, NULL);
+    // Uncomment this block to pass the first stage
+    printf("$ ");
+    // Wait for user input
+    fgets(input, 100, stdin);
+    //Removes the new line of the input buffer
+    input[strlen(input) - 1] = '\0';
+    //Prints (input command): command not found
+    printf("%s: command not found\n",input);
+  }
+  while(strcmp(input,"") != 0);
   
   return 0;
 }
