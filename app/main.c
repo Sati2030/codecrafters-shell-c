@@ -84,12 +84,12 @@ char* valid_command(char *input){
   int builtinnum = sizeof(builtin)/sizeof(builtin[0]);
   for(int i = 0; i<builtinnum;i++){
     if(strcmp(builtin[i],input) == 0){
-      char *shell_builtin = (char *)malloc(14);
+      char *shell_builtin = (char *)malloc(16);
       if(shell_builtin == NULL){
         printf("Memory allocation failed (shell builtin type)\n");
         exit(1);
       }
-      strcpy(shell_builtin,"shell builtin");
+      strcpy(shell_builtin,"a shell builtin");
       return shell_builtin;
     }
   }
