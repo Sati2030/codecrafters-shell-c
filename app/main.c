@@ -4,11 +4,12 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-const char *builtin[4] = {"exit","type","echo","pwd"};
+const char *builtin[5] = {"exit","type","echo","pwd","cd"};
 
 void echo(char **arg,int num_args);
 void type(char **arg, int num_args);
 void exit_(char **arg, int num_args);
+void cd(char **arg);
 void pwd();
 char* valid_command(char *input);
 void command_handling(char **arguments,int num_args);
@@ -172,6 +173,9 @@ void command_handling(char **arguments,int num_args){
   else if(!strcmp(arguments[0],"pwd")){
     pwd();
   }
+  else if(!strcmp(arguments[0],"cd")){
+    cd(arguments);
+  }
 
   return;
 }
@@ -199,6 +203,18 @@ void program_execution(char **arg, char *prog){
     default:
       wait(NULL);
       break;
+  }
+
+  return;
+}
+
+void cd(char **arg){
+
+  if(!chdir(arg[1])){
+    return;
+  }
+  else{
+    printf("cd: %s: No such file or directory\n",arg[1]);
   }
 
   return;
@@ -257,6 +273,12 @@ void type(char **arg, int num_args){
 
 //Function for the exit command
 void exit_(char **arg, int num_args){
+
+  //Handles if there is just exit
+  if(num_args < 2){
+    printf("Not enough arguments\n");
+    return;
+  }
 
   if(!strcmp(arg[1],"0")){
     for(int i = 0; i<num_args;i++){
