@@ -210,7 +210,17 @@ void program_execution(char **arg, char *prog){
 
 void cd(char **arg){
 
-  if(!chdir(arg[1])){
+
+  if(!arg[1] || strcmp(arg[1],"~")){
+    if(!chdir(getenv("HOME"))){
+      return;
+    }
+    else{
+      printf("Error changing to home directory\n");
+      return;
+    }
+  }
+  else if(!chdir(arg[1])){
     return;
   }
   else{
