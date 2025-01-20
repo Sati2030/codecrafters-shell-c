@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 const char *builtin[3] = {"exit","type","echo"};
 
@@ -10,6 +11,7 @@ void type(char **arg, int num_args);
 void exit_(char **arg, int num_args);
 char* valid_command(char *input);
 void command_handling(char **arguments,int num_args);
+void program_execution(char **arg, char *prog);
 
 
 int main() {
@@ -51,14 +53,29 @@ int main() {
       count++;
 
       argum = strtok(NULL, " ");
-    }  
+    }
 
+    //Adds a null at the end of the arguments
+    arguments = realloc(arguments,(count + 1) *  sizeof(char *));
+    if(arguments == NULL){
+      printf("Memory allocation failed (NULL terminator of arguments)\n");
+      exit(1);
+    }
+    arguments[count] = NULL;
+
+    //Checks if valid command is passed to input
     char *temp = valid_command(arguments[0]);
 
-    //Handles the commands
+    //Handles the commands if shell builtins
     if(temp){
-      free(temp);
-      command_handling(arguments,count);
+      if(!strcmp(temp,"a shell builtin")){
+        free(temp);
+        command_handling(arguments,count);
+      }
+      else{ //Else executes the program listed in the PATH variable
+        free(temp);
+        program_execution(arguments,arguments[0]);
+      }
     }
     else{
       //Prints (input command): command not found
@@ -157,7 +174,7 @@ void command_handling(char **arguments,int num_args){
 //Function for the echo command
 void echo(char **arg,int num_args){
 
-  for(int i = 1; i<num_args; i++){
+  for(int i = 1; i<(num_args); i++){
     printf("%s",arg[i]);
     if(i == (num_args-1)){
       printf("\n");
@@ -195,6 +212,36 @@ void exit_(char **arg, int num_args){
     }
     free(arg);
     exit(0);
+  }
+  else{
+    printf("Not a valid argument\n");
+    return;
+  }
+
+}
+
+void program_execution(char **arg, char *prog){
+  
+  //Forks a new process to execute program in 
+  pid_t pr = fork();
+
+  switch (pr)
+  {
+    //If child process
+    case 0:
+      if(execvp(prog,arg) == -1){
+        printf("Error executing program \n");
+        _exit(1);
+      }
+      break;
+    //If fork fails
+    case -1:
+      printf("Fork failed\n");
+      break;
+    //If parent process
+    default:
+      wait(NULL);
+      break;
   }
 
 }
