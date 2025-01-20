@@ -4,11 +4,12 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-const char *builtin[3] = {"exit","type","echo"};
+const char *builtin[4] = {"exit","type","echo","pwd"};
 
 void echo(char **arg,int num_args);
 void type(char **arg, int num_args);
 void exit_(char **arg, int num_args);
+void pwd();
 char* valid_command(char *input);
 void command_handling(char **arguments,int num_args);
 void program_execution(char **arg, char *prog);
@@ -159,67 +160,23 @@ char* valid_command(char *input){
 
 //Directs to its respecitve fucntion the command that is passed into the function
 void command_handling(char **arguments,int num_args){
-  if(strcmp(arguments[0],"echo") == 0){
+  if(!strcmp(arguments[0],"echo")){
     echo(arguments,num_args);
   }
-  else if(strcmp(arguments[0],"type") == 0){
+  else if(!strcmp(arguments[0],"type")){
     type(arguments,num_args);
   }
-  else if(strcmp(arguments[0],"exit") == 0){
-      exit_(arguments,num_args);
+  else if(!strcmp(arguments[0],"exit")){
+    exit_(arguments,num_args);
     }
-}
-
-
-//Function for the echo command
-void echo(char **arg,int num_args){
-
-  for(int i = 1; i<(num_args); i++){
-    printf("%s",arg[i]);
-    if(i == (num_args-1)){
-      printf("\n");
-    }
-    else{
-      printf(" ");
-    }
+  else if(!strcmp(arguments[0],"pwd")){
+    pwd();
   }
 
+  return;
 }
 
-//Function for the type command
-void type(char **arg, int num_args){
-
-  char *type;
-
-  for(int i = 1;i<num_args;i++){
-    type = valid_command(arg[i]);
-    if(type){
-      printf("%s is %s\n",arg[i],type);
-      free(type);
-    }
-    else{
-      printf("%s: not found\n",arg[i]);
-    }
-  }
-}
-
-//Function for the exit command
-void exit_(char **arg, int num_args){
-
-  if(!strcmp(arg[1],"0")){
-    for(int i = 0; i<num_args;i++){
-      free(arg[i]);
-    }
-    free(arg);
-    exit(0);
-  }
-  else{
-    printf("Not a valid argument\n");
-    return;
-  }
-
-}
-
+//Executes any program that is listed in the PATH variable
 void program_execution(char **arg, char *prog){
   
   //Forks a new process to execute program in 
@@ -244,4 +201,74 @@ void program_execution(char **arg, char *prog){
       break;
   }
 
+  return;
+}
+
+//Function for the pwd command
+void pwd(){
+  char *cwd = getcwd(NULL,0);
+
+  if(cwd){
+    printf("%s\n",cwd);
+    free(cwd);
+  }
+  else{
+    printf("Error locating current working directory");
+  }
+
+  return;
+}
+
+//Function for the echo command
+void echo(char **arg,int num_args){
+
+  for(int i = 1; i<(num_args); i++){
+    printf("%s",arg[i]);
+    if(i == (num_args-1)){
+      printf("\n");
+    }
+    else{
+      printf(" ");
+    }
+  }
+
+  return;
+
+}
+
+//Function for the type command
+void type(char **arg, int num_args){
+
+  char *type;
+
+  for(int i = 1;i<num_args;i++){
+    type = valid_command(arg[i]);
+    if(type){
+      printf("%s is %s\n",arg[i],type);
+      free(type);
+    }
+    else{
+      printf("%s: not found\n",arg[i]);
+    }
+  }
+
+  return;
+}
+
+//Function for the exit command
+void exit_(char **arg, int num_args){
+
+  if(!strcmp(arg[1],"0")){
+    for(int i = 0; i<num_args;i++){
+      free(arg[i]);
+    }
+    free(arg);
+    exit(0);
+  }
+  else{
+    printf("Not a valid argument\n");
+    return;
+  }
+
+  return;
 }
