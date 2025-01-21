@@ -210,7 +210,7 @@ void program_execution(char **arg, char *prog){
 
 void cd(char **arg){
    
-  if(!arg[1] || strcmp(arg[1],"~")){
+  if(!arg[1] || !strcmp(arg[1],"~")){
     if(!chdir(getenv("HOME"))){
       return;
     }
