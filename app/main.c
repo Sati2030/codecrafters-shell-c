@@ -41,7 +41,15 @@ int main() {
         printf("Memory allocation failed (arguments)\n");
         exit(1);
       }
-      
+
+      //If the argument is enclose in single quotes, then remove the single quotes
+      if(count){
+        if(argum[0] == '\'' && argum[strlen(argum)-1] == '\''){
+          argum++;
+          argum[strlen(argum)-1] = '\0';
+        } 
+      }
+
       length = strlen(argum);
 
       arguments[count] = malloc(length * sizeof(char));
@@ -210,6 +218,7 @@ void program_execution(char **arg, char *prog){
 
 void cd(char **arg){
    
+  //If there is no argument or the argument is "~" go to the HOME directory
   if(!arg[1] || !strcmp(arg[1],"~")){
     if(!chdir(getenv("HOME"))){
       return;
@@ -219,9 +228,11 @@ void cd(char **arg){
       return;
     }
   }
+  //Else move to the specified directory
   else if(!chdir(arg[1])){
     return;
   }
+  //If specified directory does not exist
   else{
     printf("cd: %s: No such file or directory\n",arg[1]);
   }
