@@ -29,12 +29,22 @@ int main() {
     //Removes the new line of the input buffer
     input[strlen(input) - 1] = '\0';
 
+    //Removes every single quote from the input
+    int i,j = 0;
+    for(i = 0; i < strlen(input);i++){
+      if(input[i] != '\''){
+        input[j++] = input[i];
+      }
+    }
+    input[j] = '\0';
+
+    
     //Creates a dynamic array of arguments
     char *argum = strtok(input," ");
     char **arguments = NULL;
     int count = 0;
     int length;
-  
+
     while(argum){
       arguments = realloc(arguments,(count+1) * sizeof(char *));
       if(arguments == NULL){
@@ -42,26 +52,22 @@ int main() {
         exit(1);
       }
 
-      //If the argument is enclose in single quotes, then remove the single quotes
-      if(count){
-        if(argum[0] == '\'' && argum[strlen(argum)-1] == '\''){
-          argum++;
-          argum[strlen(argum)-1] = '\0';
-        } 
-      }
-
       length = strlen(argum);
-
+  
+      //This block allocates memory for the arguments[count] to be able to fit in the argum
       arguments[count] = malloc(length * sizeof(char));
       if(arguments[count] == NULL){
         printf("Memory allocation failed (argument)\n");
         exit(1);
       }
-
+    
+      //Copys argum to the allocated space
       strcpy(arguments[count],argum);
 
+      //increments count
       count++;
 
+      //Moves on to the next argum
       argum = strtok(NULL, " ");
     }
 
