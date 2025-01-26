@@ -85,13 +85,14 @@ char **arg_arrayer(char *input){
       continue; //Skips the quote in the buffer
     }
 
-    if(input[i] == ' ' && input[i-1] == ' '){
+    //Handling if there is multiple spaces in between arguments (but not inside quotation marks)
+    if(!sq_flag && input[i] == ' ' && input[i-1] == ' '){
       continue;
     }
 
     /*If the single quote flag is not activated and the current char is a ' ' or the input is finished
     then copy the buffer into an argument block*/
-    if(sq_flag == 0 && (input[i] == ' ' || input[i] == '\0')){
+    if(!sq_flag && (input[i] == ' ' || input[i] == '\0')){
 
       buffer[j] = '\0';
 
