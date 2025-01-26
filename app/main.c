@@ -4,8 +4,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define IS_TERMINATOR(c) ((c) == ' ' || (c) == '\0')
-
 const char *builtin[5] = {"exit","type","echo","pwd","cd"};
 int count = 0;
 
@@ -81,10 +79,7 @@ char **arg_arrayer(char *input){
     //Handling of single quotes
     if(input[i] == '\''){
       if(!dq_flag && !bs_flag){ //If not already in a double quote or backslash
-        sq_flag = 1;
-        if(IS_TERMINATOR(input[i + 1])){ //If its a terminating quote, deactivate flag
-          sq_flag = 0;
-        }
+        sq_flag = !sq_flag;
         continue; //Skips the quote in the buffer
       }
     }
@@ -92,11 +87,8 @@ char **arg_arrayer(char *input){
     //Handling of double quotes
     if(input[i] == '"'){
       if(!sq_flag && !bs_flag){ //If not already in single quotes or backslash
-        dq_flag = 1;
-        if(IS_TERMINATOR(input[i+1])){ //If its a terminating quote, deactivate flag
-          dq_flag = 0;
-        }
-        continue; //Skipis the quote in the buffer 
+        dq_flag = !dq_flag;
+        continue; //Skips the quote in the buffer 
       } 
     }
 
@@ -105,12 +97,12 @@ char **arg_arrayer(char *input){
       if(dq_flag){  //If inside double quotes special meaning is reatained before another, " and $
         if(input[i+1] == '\\' || input[i+1] == '"' || input[i+1] == '$'){
           bs_flag = 1;
-          continue;
+          continue; //Skips the backslash in the buffer
         }
       }
       else if(!sq_flag){ //Else if not inside single quotes
         bs_flag = 1;
-        continue;
+        continue; //Skipts the backslash in the buffer
       }
     }
 
@@ -144,11 +136,11 @@ char **arg_arrayer(char *input){
       continue;
     }
 
-    //Makes sure backslash is deactivated after taking in the next character
-    bs_flag = 0;
-
     //Copy the input char in to the buffer
     buffer[j++] = input[i];
+
+    //Makes sure backslash is deactivated after taking in the next character
+    bs_flag = 0;
   }
 
   //Adds a null at the end of the arguments array
