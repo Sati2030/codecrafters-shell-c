@@ -21,6 +21,8 @@ void program_execution(char **arg, char *prog);
 int main() {
 
   while(1){
+    //Get the original stdout file descriptor
+    int stdout_fd = dup(fileno(stdout));
     // Flush after every printf
     setbuf(stdout, NULL);
     // Uncomment this block to pass the first stage
@@ -37,6 +39,15 @@ int main() {
     //Checks if valid command is passed to input
     char *temp = valid_command(args[0]);
 
+    //If there is a > then it directs the stdout to the desired file
+    for(int i = 0; i < count; i++){
+      if(!strcmp(args[i],">") || !strcmp(args[i],"1>")){
+        if(freopen(args[i+1],"w",stdout) == NULL){
+          printf("Error redirecting stdout\n");
+        }
+      }
+    }
+
     //Handles the commands if shell builtins
     if(temp){
       if(!strcmp(temp,"a shell builtin")){
@@ -52,6 +63,10 @@ int main() {
       //Prints (input command): command not found
       printf("%s: command not found\n",input);
     }
+
+    //Bring the stdout back to the console
+    dup2(stdout_fd, fileno(stdout));
+    close(stdout_fd);
 
     //Frees the dynamically allocated array of arguments
     for(int i = 0; i < count; i++){
@@ -300,7 +315,7 @@ void pwd(){
     free(cwd);
   }
   else{
-    printf("Error locating current working directory");
+    printf("Error locating current working directory\n");
   }
 
   return;
