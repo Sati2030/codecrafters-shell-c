@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+#define IS_TERMINATOR(c) ((c) == ' ' || (c) == '\0')
+
 const char *builtin[5] = {"exit","type","echo","pwd","cd"};
 int count = 0;
 
@@ -70,29 +72,41 @@ char **arg_arrayer(char *input){
   char **arguments = NULL;  //Arguments array
   char buffer[1024];  //Temporary buffer to keep track of the argument placed
   int i,j = 0;  //i = for the loop counter, j = for the position in the buffer
-  int sq_flag = 0;  //Flag that activates if a single quote is opened
+  int sq_flag = 0;
+  int dq_flag = 0; //Flag that activates if a single quote is opened
 
   for(i = 0; i <= strlen(input); i++){
 
     //Handling of single quotes
     if(input[i] == '\''){
-      if(!sq_flag){
+      if(!dq_flag){ //If not already in a double quote
         sq_flag = 1;
+        if(IS_TERMINATOR(input[i + 1])){ //If its a terminating quote, deactivate flag
+          sq_flag = 0;
+        }
+        continue; //Skips the quote in the buffer
       }
-      else if(input[i+1] == ' ' || input[i+1] == '\0'){
-        sq_flag = 0;
-      }
-      continue; //Skips the quote in the buffer
+    }
+
+    //Handling of double quotes
+    if(input[i] == '"'){
+      if(!sq_flag){ //If not already in single quotes
+        dq_flag = 1;
+        if(IS_TERMINATOR(input[i+1])){ //If tis a terminatinf quote, deactivate flag
+          dq_flag = 0;
+        }
+        continue; //Skipis the quote in the buffer 
+      } 
     }
 
     //Handling if there is multiple spaces in between arguments (but not inside quotation marks)
-    if(!sq_flag && input[i] == ' ' && input[i-1] == ' '){
+    if(!sq_flag && !dq_flag && input[i] == ' ' && input[i-1] == ' '){
       continue;
     }
 
     /*If the single quote flag is not activated and the current char is a ' ' or the input is finished
     then copy the buffer into an argument block*/
-    if(!sq_flag && (input[i] == ' ' || input[i] == '\0')){
+    if(!sq_flag && !dq_flag && (input[i] == ' ' || input[i] == '\0')){
 
       buffer[j] = '\0';
 
