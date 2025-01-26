@@ -5,12 +5,14 @@
 #include <sys/wait.h>
 
 const char *builtin[5] = {"exit","type","echo","pwd","cd"};
+int count = 0;
 
 void echo(char **arg,int num_args);
 void type(char **arg, int num_args);
 void exit_(char **arg, int num_args);
 void cd(char **arg);
 void pwd();
+char **arg_arrayer(char *input);
 char* valid_command(char *input);
 void command_handling(char **arguments,int num_args);
 void program_execution(char **arg, char *prog);
@@ -29,77 +31,21 @@ int main() {
     //Removes the new line of the input buffer
     input[strlen(input) - 1] = '\0';
 
-
     //Creates a dynamic array of arguments
-    char **arguments = NULL;  //Arguments array
-    int count = 0;  //Just like argc
-    char buffer[1024];  //Temporary buffer to keep track of the argument placed
-    int i,j = 0;  //i = for the loop counter, j = for the position in the buffer
-    int sq_flag;  //Flag that activates if a single quote is opened
-
-
-    for(i = 0; i <= strlen(input); i++){
-
-      //Handling of single quotes
-      if(input[i] == '\''){
-        if(!sq_flag){
-          sq_flag = 1;
-        }
-        else if(input[i+1] == ' ' || input[i+1] == '\0'){
-          sq_flag = 0;
-        }
-        continue; //Skips the quote in the buffer
-      }
-  
-      /*If the single quote flag is not activated and the current char is a ' ' or the input is finished
-      then copy the buffer into an argument block*/
-      if(sq_flag == 0 && (input[i] == ' ' || input[i] == '\0')){
-        
-        buffer[j] = '\0';
-
-        arguments = realloc(arguments,(count +1)* sizeof(char *));
-        if(arguments == NULL){
-          printf("Memory allocation failed (arguments)\n");
-          exit(1);
-        }
-
-        arguments[count] = malloc((strlen(buffer) + 1) * sizeof(char));
-        if(arguments[count] == NULL){
-          printf("Memory allocation failed argument %d\n",count);
-          exit(1);
-        }
-
-        strcpy(arguments[count],buffer);
-
-        count++;
-        j = 0;
-        continue;
-      }
-
-      //Copy the input char in to the buffer
-      buffer[j++] = input[i];
-    }
-
-    //Adds a null at the end of the arguments array
-    arguments = realloc(arguments,(count + 1) *  sizeof(char *));
-    if(arguments == NULL){
-      printf("Memory allocation failed (NULL terminator of arguments)\n");
-      exit(1);
-    }
-    arguments[count] = NULL;
+    char **args = arg_arrayer(input);
 
     //Checks if valid command is passed to input
-    char *temp = valid_command(arguments[0]);
+    char *temp = valid_command(args[0]);
 
     //Handles the commands if shell builtins
     if(temp){
       if(!strcmp(temp,"a shell builtin")){
         free(temp);
-        command_handling(arguments,count);
+        command_handling(args,count);
       }
       else{ //Else executes the program listed in the PATH variable
         free(temp);
-        program_execution(arguments,arguments[0]);
+        program_execution(args,args[0]);
       }
     }
     else{
@@ -109,15 +55,79 @@ int main() {
 
     //Frees the dynamically allocated array of arguments
     for(int i = 0; i < count; i++){
-      free(arguments[i]);
+      free(args[i]);
     }
-    free(arguments);
+    free(args);
+
+    count = 0;
   
   }
+
   return 0;
 }
 
+char **arg_arrayer(char *input){
+  char **arguments = NULL;  //Arguments array
+  char buffer[1024];  //Temporary buffer to keep track of the argument placed
+  int i,j = 0;  //i = for the loop counter, j = for the position in the buffer
+  int sq_flag = 0;  //Flag that activates if a single quote is opened
 
+  for(i = 0; i <= strlen(input); i++){
+
+    //Handling of single quotes
+    if(input[i] == '\''){
+      if(!sq_flag){
+        sq_flag = 1;
+      }
+      else if(input[i+1] == ' ' || input[i+1] == '\0'){
+        sq_flag = 0;
+      }
+      continue; //Skips the quote in the buffer
+    }
+
+    if(input[i] == ' ' && input[i-1] == ' '){
+      continue;
+    }
+
+    /*If the single quote flag is not activated and the current char is a ' ' or the input is finished
+    then copy the buffer into an argument block*/
+    if(sq_flag == 0 && (input[i] == ' ' || input[i] == '\0')){
+
+      buffer[j] = '\0';
+
+      arguments = realloc(arguments,(count +1)* sizeof(char *));
+      if(arguments == NULL){
+        printf("Memory allocation failed (arguments)\n");
+        exit(1);
+      }
+
+      arguments[count] = malloc((strlen(buffer) + 1) * sizeof(char));
+      if(arguments[count] == NULL){
+        printf("Memory allocation failed argument %d\n",count);
+        exit(1);
+      }
+
+      strcpy(arguments[count],buffer);
+
+      count++;
+      j = 0;
+      continue;
+    }
+
+    //Copy the input char in to the buffer
+    buffer[j++] = input[i];
+  }
+
+  //Adds a null at the end of the arguments array
+  arguments = realloc(arguments,(count + 1) *  sizeof(char *));
+  if(arguments == NULL){
+    printf("Memory allocation failed (NULL terminator of arguments)\n");
+    exit(1);
+  }
+  arguments[count] = NULL;
+
+  return arguments;
+}
 
 //Checks if a command is valid and returns type
 char* valid_command(char *input){
