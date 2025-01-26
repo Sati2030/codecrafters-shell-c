@@ -95,7 +95,7 @@ char **arg_arrayer(char *input){
     //Handling of backslashes
     if(input[i] == '\\'){
       if(dq_flag){  //If inside double quotes special meaning is reatained before another, " and $
-        if(input[i+1] == '\\' || input[i+1] == '"' || input[i+1] == '$'){
+        if((input[i+1] == '\\' || input[i+1] == '"' || input[i+1] == '$') && input[i-1] != '\\'){
           bs_flag = 1;
           continue; //Skips the backslash in the buffer
         }
