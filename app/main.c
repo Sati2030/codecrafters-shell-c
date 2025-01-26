@@ -80,7 +80,7 @@ char **arg_arrayer(char *input){
 
     //Handling of single quotes
     if(input[i] == '\''){
-      if(!dq_flag){ //If not already in a double quote
+      if(!dq_flag && !bs_flag){ //If not already in a double quote or backslash
         sq_flag = 1;
         if(IS_TERMINATOR(input[i + 1])){ //If its a terminating quote, deactivate flag
           sq_flag = 0;
@@ -91,9 +91,9 @@ char **arg_arrayer(char *input){
 
     //Handling of double quotes
     if(input[i] == '"'){
-      if(!sq_flag){ //If not already in single quotes
+      if(!sq_flag && !bs_flag){ //If not already in single quotes or backslash
         dq_flag = 1;
-        if(IS_TERMINATOR(input[i+1])){ //If tis a terminatinf quote, deactivate flag
+        if(IS_TERMINATOR(input[i+1])){ //If its a terminating quote, deactivate flag
           dq_flag = 0;
         }
         continue; //Skipis the quote in the buffer 
@@ -111,8 +111,8 @@ char **arg_arrayer(char *input){
       continue;
     }
 
-    /*If the single quote flag is not activated and the current char is a ' ' or the input is finished
-    then copy the buffer into an argument block*/
+    /*If not inside quotes, and not after a backslash, the space or '\0'
+    will store the buffer into an argument space*/
     if(!sq_flag && !dq_flag && ((input[i] == ' ' && !bs_flag) || input[i] == '\0')){
 
       buffer[j] = '\0';
@@ -136,6 +136,7 @@ char **arg_arrayer(char *input){
       continue;
     }
 
+    //Makes sure backslash is deactivated after taking in the next character
     bs_flag = 0;
 
     //Copy the input char in to the buffer
