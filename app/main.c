@@ -72,8 +72,9 @@ char **arg_arrayer(char *input){
   char **arguments = NULL;  //Arguments array
   char buffer[1024];  //Temporary buffer to keep track of the argument placed
   int i,j = 0;  //i = for the loop counter, j = for the position in the buffer
-  int sq_flag = 0;
-  int dq_flag = 0; //Flag that activates if a single quote is opened
+  int sq_flag = 0; //Flag that activates if a single quote is opened
+  int dq_flag = 0; //Flag that activates if a double quote is opened
+  int bs_flag = 0; //Flag that activates if a backslash is opened
 
   for(i = 0; i <= strlen(input); i++){
 
@@ -99,6 +100,12 @@ char **arg_arrayer(char *input){
       } 
     }
 
+    //Handling of backslashes
+    if(input[i] == '\\'){
+      bs_flag = 1;
+      continue;
+    }
+
     //Handling if there is multiple spaces in between arguments (but not inside quotation marks)
     if(!sq_flag && !dq_flag && input[i] == ' ' && input[i-1] == ' '){
       continue;
@@ -106,7 +113,7 @@ char **arg_arrayer(char *input){
 
     /*If the single quote flag is not activated and the current char is a ' ' or the input is finished
     then copy the buffer into an argument block*/
-    if(!sq_flag && !dq_flag && (input[i] == ' ' || input[i] == '\0')){
+    if(!sq_flag && !dq_flag && ((input[i] == ' ' && !bs_flag) || input[i] == '\0')){
 
       buffer[j] = '\0';
 
@@ -128,6 +135,8 @@ char **arg_arrayer(char *input){
       j = 0;
       continue;
     }
+
+    bs_flag = 0;
 
     //Copy the input char in to the buffer
     buffer[j++] = input[i];
