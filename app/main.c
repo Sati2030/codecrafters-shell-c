@@ -102,8 +102,16 @@ char **arg_arrayer(char *input){
 
     //Handling of backslashes
     if(input[i] == '\\'){
-      bs_flag = 1;
-      continue;
+      if(dq_flag){  //If inside double quotes special meaning is reatained before another, " and $
+        if(input[i+1] == '\\' || input[i+1] == '"' || input[i+1] == '$'){
+          bs_flag = 1;
+          continue;
+        }
+      }
+      else if(!sq_flag){ //Else if not inside single quotes
+        bs_flag = 1;
+        continue;
+      }
     }
 
     //Handling if there is multiple spaces in between arguments (but not inside quotation marks)
