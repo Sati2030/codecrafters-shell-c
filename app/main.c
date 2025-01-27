@@ -40,8 +40,6 @@ int main() {
     //Checks if valid command is passed to input
     char *temp = valid_command(args[0]);
 
-    printf("count: %d\n",count);
-
     //If there is a > then it directs the stdout or stderr to the desired file and removes from args list
     for(int i = count-1; i >= 0; i--){
       if(!strcmp(args[i],"2>")){
@@ -58,12 +56,6 @@ int main() {
         free(args[i]);
         args = realloc(args,count * sizeof(char *));
       }
-    }
-
-    printf("count after the modification: %d\n",count);
-
-    for(int j = 0; j < count; j++){
-      printf("arg[%d]:%s\n",j,args[j]);
     }
 
     //Handles the commands if shell builtins
