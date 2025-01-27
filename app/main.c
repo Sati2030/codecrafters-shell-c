@@ -21,8 +21,9 @@ void program_execution(char **arg, char *prog);
 int main() {
 
   while(1){
-    //Get the original stdout file descriptor
+    //Get the original stdout and stderr file descriptor
     int stdout_fd = dup(fileno(stdout));
+    int stderr_fd = dup(fileno(stderr));
     // Flush after every printf
     setbuf(stdout, NULL);
     // Uncomment this block to pass the first stage
@@ -39,13 +40,30 @@ int main() {
     //Checks if valid command is passed to input
     char *temp = valid_command(args[0]);
 
-    //If there is a > then it directs the stdout to the desired file
-    for(int i = 0; i < count; i++){
-      if(!strcmp(args[i],">") || !strcmp(args[i],"1>")){
-        if(freopen(args[i+1],"w",stdout) == NULL){
-          printf("Error redirecting stdout\n");
-        }
+    printf("count: %d\n",count);
+
+    //If there is a > then it directs the stdout or stderr to the desired file and removes from args list
+    for(int i = count-1; i >= 0; i--){
+      if(!strcmp(args[i],"2>")){
+        freopen(args[i+1],"w",stderr);
+        count -= 2;
+        free(args[i+1]);
+        free(args[i]);
+        args = realloc(args,count * sizeof(char *));
       }
+      else if(!strcmp(args[i],">") || !strcmp(args[i],"1>")){
+        freopen(args[i+1],"w",stdout);
+        count -= 2;
+        free(args[i+1]);
+        free(args[i]);
+        args = realloc(args,count * sizeof(char *));
+      }
+    }
+
+    printf("count after the modification: %d\n",count);
+
+    for(int j = 0; j < count; j++){
+      printf("arg[%d]:%s\n",j,args[j]);
     }
 
     //Handles the commands if shell builtins
@@ -65,8 +83,12 @@ int main() {
     }
 
     //Bring the stdout back to the console
+    fflush(stdout);
+    fflush(stderr);
     dup2(stdout_fd, fileno(stdout));
+    dup2(stderr_fd, fileno(stderr));
     close(stdout_fd);
+    close(stderr_fd);
 
     //Frees the dynamically allocated array of arguments
     for(int i = 0; i < count; i++){
