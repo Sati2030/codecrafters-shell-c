@@ -5,7 +5,7 @@
 #include <sys/wait.h>
 
 const char *builtin[5] = {"exit","type","echo","pwd","cd"};
-int count = 0;
+int static count = 0;
 
 void echo(char **arg,int num_args);
 void type(char **arg, int num_args);
@@ -64,8 +64,17 @@ int main() {
         free(temp);
         command_handling(args,count);
       }
-      else{ //Else executes the program listed in the PATH variable
+      else if(args[0]){ //Else executes the program listed in the PATH variable
         free(temp);
+
+        //Adds NULL terminator to the argument array
+        args = realloc(args,(count+1)*sizeof(char*));
+        if(args == NULL){
+          printf("Error reallocating memory for arguments array (NULL terminator)\n");
+          exit(1);
+        }
+        args[count] = NULL;
+
         program_execution(args,args[0]);
       }
     }
@@ -172,14 +181,6 @@ char **arg_arrayer(char *input){
     bs_flag = 0;
   }
 
-  //Adds a null at the end of the arguments array
-  arguments = realloc(arguments,(count + 1) *  sizeof(char *));
-  if(arguments == NULL){
-    printf("Memory allocation failed (NULL terminator of arguments)\n");
-    exit(1);
-  }
-  arguments[count] = NULL;
-
   return arguments;
 }
 
@@ -278,6 +279,7 @@ void program_execution(char **arg, char *prog){
   {
     //If child process
     case 0:
+      fflush(stdout);
       if(execvp(prog,arg) == -1){
         printf("Error executing program \n");
         _exit(1);
