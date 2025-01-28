@@ -12,8 +12,9 @@ void type(char **arg, int num_args);
 void exit_(char **arg, int num_args);
 void cd(char **arg);
 void pwd();
+char **redirection(char **arg);
 char **arg_arrayer(char *input);
-char* valid_command(char *input);
+char *valid_command(char *input);
 void command_handling(char **arguments,int num_args);
 void program_execution(char **arg, char *prog);
 
@@ -40,23 +41,8 @@ int main() {
     //Checks if valid command is passed to input
     char *temp = valid_command(args[0]);
 
-    //If there is a > then it directs the stdout or stderr to the desired file and removes from args list
-    for(int i = count-1; i >= 0; i--){
-      if(!strcmp(args[i],"2>")){
-        freopen(args[i+1],"w",stderr);
-        count -= 2;
-        free(args[i+1]);
-        free(args[i]);
-        args = realloc(args,count * sizeof(char *));
-      }
-      else if(!strcmp(args[i],">") || !strcmp(args[i],"1>")){
-        freopen(args[i+1],"w",stdout);
-        count -= 2;
-        free(args[i+1]);
-        free(args[i]);
-        args = realloc(args,count * sizeof(char *));
-      }
-    }
+    //Handling of the redirection commands
+    args = redirection(args);
 
     //Handles the commands if shell builtins
     if(temp){
@@ -102,6 +88,44 @@ int main() {
   }
 
   return 0;
+}
+
+char **redirection(char **args){
+
+  //If there is a > then it directs the stdout or stderr to the desired file and removes from args list
+  for(int i = count-1; i >= 0; i--){
+    if(!strcmp(args[i],"2>")){  //If write stderr to a file
+      freopen(args[i+1],"w",stderr);
+      count -= 2;
+      free(args[i+1]);
+      free(args[i]);
+      args = realloc(args,count * sizeof(char *));
+    }
+    else if(!strcmp(args[i],">") || !strcmp(args[i],"1>")){  //If write stdout to a file
+      freopen(args[i+1],"w",stdout);
+      count -= 2;
+      free(args[i+1]);
+      free(args[i]);
+      args = realloc(args,count * sizeof(char *));
+    }
+    else if(!strcmp(args[i],">>") || !strcmp(args[i],"1>>")){ //If append stdout to a file
+      freopen(args[i+1],"a",stdout);
+      count-=2;
+      free(args[i+1]);
+      free(args[i]);
+      args = realloc(args,count*sizeof(char*));
+    }
+    else if(!strcmp(args[i],"2>>")){ //If append stderr to a file
+      freopen(args[i+1],"a",stderr);
+      count-=2;
+      free(args[i+1]);
+      free(args[i]);
+      args = realloc(args,count*sizeof(char*));
+    }
+  }
+
+  return(args);
+
 }
 
 char **arg_arrayer(char *input){
