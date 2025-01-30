@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <termios.h>
 
 const char *builtin[5] = {"exit","type","echo","pwd","cd"};
 int static count = 0;
@@ -12,6 +13,8 @@ void type(char **arg, int num_args);
 void exit_(char **arg, int num_args);
 void cd(char **arg);
 void pwd();
+void deactivateCannonMode();
+char *readInput();
 char **redirection(char **arg);
 char **arg_arrayer(char *input);
 char *valid_command(char *input);
@@ -29,14 +32,17 @@ int main() {
     setbuf(stdout, NULL);
     // Uncomment this block to pass the first stage
     printf("$ ");
-    // Wait for user input
-    char input[100];
-    fgets(input, 100, stdin);
-    //Removes the new line of the input buffer
-    input[strlen(input) - 1] = '\0';
+    
+    //Deactivates cannonical mode of the terminal
+    deactivateCannonMode();
 
-    //Creates a dynamic array of arguments
+    //reads input
+    char *input = readInput();
+
+    //Creates a dynamic array of argupments
     char **args = arg_arrayer(input);
+    
+    free(input);
 
     //Checks if valid command is passed to input
     char *temp = valid_command(args[0]);
@@ -66,7 +72,7 @@ int main() {
     }
     else{
       //Prints (input command): command not found
-      printf("%s: command not found\n",input);
+      printf("%s: command not found\n",args[0]);
     }
 
     //Bring the stdout back to the console
@@ -88,8 +94,67 @@ int main() {
   }
 
   return 0;
+
 }
 
+char *readInput(){
+
+  char *input = NULL;
+  char c;
+  int i = 0;
+
+  while(read(STDIN_FILENO,&c,1) > 0){
+
+    input = realloc(input,(i+1)*sizeof(char));
+    if(!input){
+      printf("Error allocating memory for character %d in input\n",i);
+      exit(1);
+    }
+
+    if(c == '\n'){
+      printf("\n");
+      input[i] = '\0';
+      break;
+    }
+
+    if(c == 127){
+      if(i > 0){
+        printf("\b \b");
+        i--;
+      }
+      continue;
+    }
+
+    if(c == '\t'){
+      if(!strcmp(input,"ech")){
+        input = realloc(input,(i+2)*sizeof(char));
+        printf("o ");
+        input[i] = 'o';
+        input[i+1] = ' ';
+        i+=2;
+      }
+      if(!strcmp(input,"exi")){
+        input = realloc(input,(i+2)*sizeof(char));
+        printf("t ");
+        input[i] = 't';
+        input[i+1] = ' ';
+        i+=2;
+      }
+      continue;
+    }
+
+
+    printf("%c",c);
+
+    input[i] = c;
+
+    i++;
+  }
+
+  return input;
+}
+
+//Redirects stdout or stderr to a file if specified
 char **redirection(char **args){
 
   //If there is a > then it directs the stdout or stderr to the desired file and removes from args list
@@ -128,6 +193,7 @@ char **redirection(char **args){
 
 }
 
+//Organizes input into a dynamically allocated array
 char **arg_arrayer(char *input){
   char **arguments = NULL;  //Arguments array
   char buffer[1024];  //Temporary buffer to keep track of the argument placed
@@ -322,6 +388,28 @@ void program_execution(char **arg, char *prog){
   return;
 }
 
+//Deactivates cannonical mode for instant input reading
+void deactivateCannonMode(){
+  
+  struct termios terminal;
+
+  if(tcgetattr(STDIN_FILENO, &terminal) == -1){
+    printf("Error getting terminal attributes\n");
+    exit(1);
+  }
+
+  terminal.c_lflag &= ~(ICANON|ECHO|ISIG);
+
+  if(tcsetattr(STDIN_FILENO,TCSANOW,&terminal) == -1){
+    printf("Error setting terminal attributes\n");
+    exit(1);
+  }
+
+  return;
+
+}
+
+//Function for the cd command
 void cd(char **arg){
    
   //If there is no argument or the argument is "~" go to the HOME directory
