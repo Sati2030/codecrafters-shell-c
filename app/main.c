@@ -125,7 +125,7 @@ char *readInput(){
       continue;
     }
 
-    if(c == '\t'){
+    if(c == 9){
       if(!strcmp(input,"ech")){
         input = realloc(input,(i+2)*sizeof(char));
         printf("o ");
