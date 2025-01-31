@@ -105,13 +105,8 @@ char *readInput(){
 
   while(read(STDIN_FILENO,&c,1) > 0){
 
-    input = realloc(input,(i+1)*sizeof(char));
-    if(!input){
-      printf("Error allocating memory for character %d in input\n",i);
-      exit(1);
-    }
-
     if(c == '\n'){
+      input = realloc(input,(i+1)*sizeof(char));
       printf("\n");
       input[i] = '\0';
       break;
@@ -119,26 +114,38 @@ char *readInput(){
 
     if(c == 127){
       if(i > 0){
+        input = realloc(input,(i)*sizeof(char));
         printf("\b \b");
-        i--;
+        input[--i] = '\0';
       }
       continue;
     }
+    
 
     if(c == 9){
       if(!strcmp(input,"ech")){
-        input = realloc(input,(i+2)*sizeof(char));
         printf("o ");
-        input[i] = 'o';
-        input[i+1] = ' ';
-        i+=2;
+        input = realloc(input,(i+3)*sizeof(char));
+        input[i++] = 'o';
+        input[i++] = ' ';
+        input[i] = '\0';
       }
-      if(!strcmp(input,"exi")){
-        input = realloc(input,(i+2)*sizeof(char));
+      else if(!strcmp(input,"exi")){
         printf("t ");
-        input[i] = 't';
-        input[i+1] = ' ';
-        i+=2;
+        input = realloc(input,(i+3)*sizeof(char));
+        input[i++] = 't';
+        input[i++] = ' ';
+        input[i] = '\0';
+      }
+      else if(!strcmp(input,"typ")){
+        printf("e ");
+        input = realloc(input,(i+3)*sizeof(char));
+        input[i++] = 'e';
+        input[i++] = ' ';
+        input[i] = '\0';
+      }
+      else{
+        printf("\a");
       }
       continue;
     }
@@ -146,9 +153,11 @@ char *readInput(){
 
     printf("%c",c);
 
-    input[i] = c;
+    input = realloc(input,(i+2)*sizeof(char));
 
-    i++;
+    input[i++] = c;
+    input[i] = '\0';
+
   }
 
   return input;
@@ -280,6 +289,7 @@ char* valid_command(char *input){
   //First check if the command is not a shell builtin
   int builtinnum = sizeof(builtin)/sizeof(builtin[0]);
   for(int i = 0; i<builtinnum;i++){
+
     if(strcmp(builtin[i],input) == 0){
       char *shell_builtin = (char *)malloc(16);
       if(shell_builtin == NULL){
