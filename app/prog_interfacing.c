@@ -103,23 +103,30 @@ char *valid_command(char *input){
     return NULL;
 }
 
+//Gets result matches
 Arguments get_matches(char *input){
 
+    //Initialize entries array and retrieve PATH
     Arguments entries = {NULL,0};
     char *path = get_path();
 
+    //Tokenizes the PATH
     char *dir = strtok(path,":");
 
     while(dir){
+        //Open directory for check
         DIR *directory = opendir(dir);
         if(directory){
+            //Check every item inside directory
             struct dirent *entry;
             while((entry=readdir(directory))){
+                //If entry starts with the same as the input
                 if(!strncmp(entry->d_name,input,strlen(input))){
 
                     char search[1024];
                     snprintf(search,sizeof(search),"%s/%s",dir,entry->d_name);
 
+                    //If the search is an executable add to the entires array
                     if(!access(search,X_OK)){
 
                         entries.arguments = realloc(entries.arguments,(entries.count+1)*sizeof(char*));
@@ -142,6 +149,7 @@ Arguments get_matches(char *input){
         dir = strtok(NULL,":");
     }
 
+    free(path);
     return entries;
 
 
