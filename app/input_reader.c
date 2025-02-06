@@ -129,7 +129,7 @@ char *other_tab(char *input,int *count){
     if(read(STDIN_FILENO,&c,1) > 0){
       if(c == 9){ //If tab is pressed again
         printf("\n");
-        for(int i = (entries.count-1); i >= 0; i--){
+        for(int i = 0; i < entries.count; i++){
           printf("%s  ",entries.arguments[i]);
         }
         printf("\n");
