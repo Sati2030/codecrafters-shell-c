@@ -81,7 +81,6 @@ char *readInput(){
       }
       else{
         input = other_tab(input,&i);
-        printf("\a"); //If no autocompletion available
       }
       continue;
     }
@@ -99,32 +98,58 @@ char *readInput(){
   return input;
 }
 
+//Handles the tab functionality if its not an in-built command
 char *other_tab(char *input,int *count){
   
-  Entries entries = get_matches(input);
+  //Creates an arguments dyanmic array to hold the results of the search
+  Arguments entries = get_matches(input);
+  char c; //Used for reading next character if there is multiple results
 
+  //If there is only one command that can be autocompleted
   if(entries.count == 1){
-    int oginputlen = strlen(input);
-    entries.entries[0] += strlen(input);
-    printf("%s ",entries.entries[0]);
-    input = realloc(input,(*count+strlen(entries.entries[0])+2)*sizeof(char));
+    int oginputlen = strlen(input); 
+    entries.arguments[0] += strlen(input); //Moves the result pointer to the char after the input
+    printf("%s ",entries.arguments[0]);
+    input = realloc(input,(*count+strlen(entries.arguments[0])+2)*sizeof(char)); //Reallocates the input array to hold the new input
     if(!input){
       perror("Error realocating memory for the input\n");
       exit(1);
     }
-    int NEL = strlen(entries.entries[0]);
+    //Starts adding the string to the input array
+    int NEL = strlen(entries.arguments[0]);
     for(int j = 0; j < NEL;j++){
-      input[(*count)++] = entries.entries[0][j];
+      input[(*count)++] = entries.arguments[0][j];
     }
     input[(*count)++] = ' ';
     input[*count] = '\0';
-    entries.entries[0] -= oginputlen;
+    entries.arguments[0] -= oginputlen; //Returns the original back to the original char that was pointed in the search result
+  }
+  else if(entries.count > 1){ //If there are multiple results
+    printf("\a");
+    if(read(STDIN_FILENO,&c,1) > 0){
+      if(c == 9){ //If tab is pressed again
+        printf("\n");
+        for(int i = 0; i < entries.count; i++){
+          printf("%s  ",entries.arguments[i]);
+        }
+        printf("\n");
+        printf("$ ");
+        printf("%s",input);
+      }
+      else{ //If another key is pressed
+        printf("%c",c);
+        input = realloc(input,(*count + 2)*sizeof(char));
+        input[(*count)++] = c;
+        input[*count] = '\0';
+      }
+    }
   }
 
+
   for(int k = 0; k<entries.count;k++){
-    free(entries.entries[k]);
+    free(entries.arguments[k]);
   }
-  free(entries.entries);
+  free(entries.arguments);
 
   return input;
 

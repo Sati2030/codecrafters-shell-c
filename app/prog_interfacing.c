@@ -103,9 +103,9 @@ char *valid_command(char *input){
     return NULL;
 }
 
-Entries get_matches(char *input){
+Arguments get_matches(char *input){
 
-    Entries entries = {NULL,0};
+    Arguments entries = {NULL,0};
     char *path = get_path();
 
     char *dir = strtok(path,":");
@@ -122,13 +122,13 @@ Entries get_matches(char *input){
 
                     if(!access(search,X_OK)){
 
-                        entries.entries = realloc(entries.entries,(entries.count+1)*sizeof(char*));
-                        if(!entries.entries){
+                        entries.arguments = realloc(entries.arguments,(entries.count+1)*sizeof(char*));
+                        if(!entries.arguments){
                             perror("Erorr allocating memory for entries array\n");
                             exit(1);
                         }
-                        entries.entries[entries.count] = strdup(entry->d_name);
-                        if(!entries.entries[entries.count]){
+                        entries.arguments[entries.count] = strdup(entry->d_name);
+                        if(!entries.arguments[entries.count]){
                             perror("Error allocating memory for entry in entries array\n");
                             exit(1);
                         }

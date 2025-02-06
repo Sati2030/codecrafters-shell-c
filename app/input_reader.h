@@ -1,5 +1,6 @@
 #ifndef _MY_INPUT_READER_H
 #define _MY_INPUT_READER_H
+#include "argumenter.h"
 #include "prog_interfacing.h"
 
 void deactivateCannonMode();
