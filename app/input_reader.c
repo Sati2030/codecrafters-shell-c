@@ -144,6 +144,9 @@ char *other_tab(char *input,int *count){
       }
     }
   }
+  else{
+    printf("\a");
+  }
 
 
   for(int k = 0; k<entries.count;k++){
