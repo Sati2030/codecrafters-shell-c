@@ -127,7 +127,7 @@ Arguments get_matches(char *input){
                     snprintf(search,sizeof(search),"%s/%s",dir,entry->d_name);
 
                     //If the search is an executable add to the entires array
-                    if(!access(search,X_OK)){
+                    if(!access(search,F_OK)){
 
                         entries.arguments = realloc(entries.arguments,(entries.count+1)*sizeof(char*));
                         if(!entries.arguments){
