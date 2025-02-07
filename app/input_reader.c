@@ -107,6 +107,8 @@ char *other_tab(char *input,int *count){
   }
   else if(entries.count > 1){ //If there are multiple results
 
+    printf("break\n\n");
+
     for(int p = 0; p < entries.count ; p++){
       Arguments temp = get_matches(entries.arguments[p]);
       if(temp.count == entries.count){
@@ -142,8 +144,6 @@ char *other_tab(char *input,int *count){
     printf("\a");
   }
 
-
-
 exit:
     for(int k = 0; k<entries.count;k++){
     free(entries.arguments[k]);
@@ -154,6 +154,7 @@ exit:
 
 }
 
+//Function that handles autocompletion
 char *complete_input(char *input,char *completion,int *count){
 
   int ogInpLen = strlen(input);
@@ -176,6 +177,7 @@ char *complete_input(char *input,char *completion,int *count){
 
 }
 
+//Handling of backspacing a character
 char *backspace(char *input, int *count){
   
   if(*count > 0){

@@ -148,7 +148,6 @@ Arguments get_matches(char *input){
         }
         dir = strtok(NULL,":");
     }
-
     free(path);
     return entries;
 
