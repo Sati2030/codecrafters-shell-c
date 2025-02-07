@@ -107,8 +107,6 @@ char *other_tab(char *input,int *count){
   }
   else if(entries.count > 1){ //If there are multiple results
 
-    printf("break\n\n");
-
     for(int p = 0; p < entries.count ; p++){
       Arguments temp = get_matches(entries.arguments[p]);
       if(temp.count == entries.count){
