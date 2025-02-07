@@ -6,6 +6,8 @@
 void deactivateCannonMode();
 char *readInput();
 char *other_tab(char *input,int *count);
+char *complete_input(char *input, char *completion, int *count);
+char *backspace(char *input,int *count);
 void activateCannonMode();
 
 #endif

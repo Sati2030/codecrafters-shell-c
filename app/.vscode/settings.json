@@ -2,6 +2,7 @@
     "files.associations": {
         "input_reader.h": "c",
         "builtin_comms.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "argumenter.h": "c"
     }
 }

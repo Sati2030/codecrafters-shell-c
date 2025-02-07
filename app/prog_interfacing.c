@@ -113,6 +113,7 @@ Arguments get_matches(char *input){
     //Tokenizes the PATH
     char *dir = strtok(path,":");
 
+    //Checks every directory for matches of the prefix
     while(dir){
         //Open directory for check
         DIR *directory = opendir(dir);
@@ -145,7 +146,6 @@ Arguments get_matches(char *input){
             }
             closedir(directory);
         }
-
         dir = strtok(NULL,":");
     }
 

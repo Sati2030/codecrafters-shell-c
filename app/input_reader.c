@@ -48,11 +48,7 @@ char *readInput(){
 
     //Handles input of BACKSPACE
     if(c == 127){
-      if(i > 0){
-        input = realloc(input,(i)*sizeof(char));
-        printf("\b \b");
-        input[--i] = '\0';
-      }
+      input = backspace(input,&i);
       continue;
     }
     
@@ -107,24 +103,19 @@ char *other_tab(char *input,int *count){
 
   //If there is only one command that can be autocompleted
   if(entries.count == 1){
-    int oginputlen = strlen(input); 
-    entries.arguments[0] += strlen(input); //Moves the result pointer to the char after the input
-    printf("%s ",entries.arguments[0]);
-    input = realloc(input,(*count+strlen(entries.arguments[0])+2)*sizeof(char)); //Reallocates the input array to hold the new input
-    if(!input){
-      perror("Error realocating memory for the input\n");
-      exit(1);
-    }
-    //Starts adding the string to the input array
-    int NEL = strlen(entries.arguments[0]);
-    for(int j = 0; j < NEL;j++){
-      input[(*count)++] = entries.arguments[0][j];
-    }
-    input[(*count)++] = ' ';
-    input[*count] = '\0';
-    entries.arguments[0] -= oginputlen; //Returns the original back to the original char that was pointed in the search result
+    input = complete_input(input,entries.arguments[0],count);
   }
   else if(entries.count > 1){ //If there are multiple results
+
+    for(int p = 0; p < entries.count ; p++){
+      Arguments temp = get_matches(entries.arguments[p]);
+      if(temp.count == entries.count){
+        complete_input(input,entries.arguments[p],count);
+        input = backspace(input,count);
+        goto exit;
+      }
+    }
+
     printf("\a");
     if(read(STDIN_FILENO,&c,1) > 0){
       if(c == 9){ //If tab is pressed again
@@ -135,6 +126,9 @@ char *other_tab(char *input,int *count){
         printf("\n");
         printf("$ ");
         printf("%s",input);
+      }
+      else if(c == 127){
+        input = backspace(input,count);
       }
       else{ //If another key is pressed
         printf("%c",c);
@@ -149,13 +143,48 @@ char *other_tab(char *input,int *count){
   }
 
 
-  for(int k = 0; k<entries.count;k++){
+
+exit:
+    for(int k = 0; k<entries.count;k++){
     free(entries.arguments[k]);
   }
   free(entries.arguments);
 
   return input;
 
+}
+
+char *complete_input(char *input,char *completion,int *count){
+
+  int ogInpLen = strlen(input);
+  completion += ogInpLen;
+  int newCompLen = strlen(completion);
+  printf("%s ",completion);
+  input = realloc(input,(*count+newCompLen+1)*sizeof(char));
+  if(!input){
+    perror("Error allocating memory for input in autocompletion\n");
+    exit(1);
+  }
+  for(int i = 0; i<newCompLen; i++){
+    input[(*count)++] = completion[i];
+  }
+  input[(*count)++] = ' ';
+  input[*count] = '\0';
+  completion -= ogInpLen;
+
+  return input;
+
+}
+
+char *backspace(char *input, int *count){
+  
+  if(*count > 0){
+    input = realloc(input,(*count)*sizeof(char));
+    printf("\b \b");
+    input[--(*count)] = '\0';
+  }
+
+  return input;
 }
 
 //Restores original terminal settings
