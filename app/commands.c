@@ -57,10 +57,11 @@ void echo(Arguments *args){
 void type(Arguments *args){
 
     //Handling if the second argument is empty
-    if(args->arguments[1]){
+    if(!strcmp(args->arguments[1],"")){
         return;
     }
 
+    //For each of the arguments passed print the type
     for(int i = 1; i<args->count; i++){
         int typeFlag = valid_command(args->arguments[i]);
         if(typeFlag < 0){
@@ -83,19 +84,23 @@ void type(Arguments *args){
 
 }
 
+//Function that returns a flag indicating if a string is a valid command
 int valid_command(char *arg){
     char *type = NULL;
     int builtinLen = sizeof(builtin)/sizeof(builtin[0]);
 
+    //Checks if shell builtin (returns 0)
     for(int i = 0; i<builtinLen; i++){
         if(!strcmp(arg,builtin[i])){
             return 0;
         }
     }
+    //Checks if command in PATH (returns 1)
     if((type = path_checker(arg))){
         free(type);
         return 1;
     }
+    //If command is invalid (returns)
     else{
         return -1;
     }

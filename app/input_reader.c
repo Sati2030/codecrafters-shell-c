@@ -122,6 +122,7 @@ void other_tab(char *input,int *count){
     if(read(STDIN_FILENO,&c,1) > 0){
       if(c == 9){ //If tab is pressed again
         printf("\n");
+        qsort(entries.arguments,entries.count,sizeof(char*),comparatorFunction);
         for(int i = 0; i < entries.count; i++){
           printf("%s  ",entries.arguments[i]);
         }
@@ -172,6 +173,7 @@ void get_matches(SearchResults *entries, char *input){
       //Check every item inside directory
       struct dirent *entry;
       while((entry=readdir(directory))){
+
         //If entry starts with the same as the input
         if(!strncmp(entry->d_name,input,strlen(input))){
 
@@ -180,6 +182,13 @@ void get_matches(SearchResults *entries, char *input){
 
           //If the search is an executable add to the entires array
           if(!access(search,F_OK)){
+
+            //Handles duplicates
+            for(int i = 0; i<entries->count; i++){
+              if(!strcmp(entry->d_name,entries->arguments[i])){
+                goto ex;
+              }
+            }
 
             entries->arguments = realloc(entries->arguments,(entries->count+1)*sizeof(char*));
             if(!entries->arguments){
@@ -193,8 +202,13 @@ void get_matches(SearchResults *entries, char *input){
             }
             entries->count++;
           }
+          
         }
+
+        ex:;
+
       }
+
       closedir(directory);
     }
     dir = strtok(NULL,":");
@@ -233,6 +247,10 @@ void backspace(char *input, int *count){
   }
 
   return;
+}
+
+int comparatorFunction(const void *a, const void *b){
+  return strcmp(*(const char**)a,*(const char**)b);
 }
 
 //Restores original terminal settings
