@@ -6,7 +6,6 @@
 #include <dirent.h>
 #include <sys/wait.h>
 
-const char *builtin[5] = {"echo","type","exit","pwd","cd"};
 
 //Executes any program that is listed in the PATH variable
 void program_execution(Arguments *args){
@@ -18,21 +17,21 @@ void program_execution(Arguments *args){
 
     switch (pr)
     {
+        //If parent process
+        default:
+            wait(NULL);
+        break;
         //If child process
         case 0:
-        fflush(stdout);
-        if(execvp(prog,args->arguments) == -1){
-            perror("Error executing program \n");
-            _exit(1);
-        }
+            fflush(stdout);
+            if(execvp(prog,args->arguments) == -1){
+                perror("Error executing program \n");
+                _exit(1);
+            }
         break;
         //If fork fails
         case -1:
-        printf("Fork failed\n");
-        break;
-        //If parent process
-        default:
-        wait(NULL);
+            printf("Fork failed\n");
         break;
     }
 
@@ -59,15 +58,7 @@ char *get_path(){
 }
 
 //Checks if a command is valid and returns type
-char *valid_command(char *input){
-
-    //First check if the command is not a shell builtin
-    int builtinnum = sizeof(builtin)/sizeof(builtin[0]);
-    for(int i = 0; i<builtinnum;i++){
-        if(strcmp(builtin[i],input) == 0){
-            return "a shell builtin";
-        }
-    }
+char *path_checker(char *input){
 
     char *path = get_path();
 
@@ -103,53 +94,3 @@ char *valid_command(char *input){
     return NULL;
 }
 
-//Gets result matches
-Arguments get_matches(char *input){
-
-    //Initialize entries array and retrieve PATH
-    Arguments entries = {NULL,0};
-    char *path = get_path();
-
-    //Tokenizes the PATH
-    char *dir = strtok(path,":");
-
-    //Checks every directory for matches of the prefix
-    while(dir){
-        //Open directory for check
-        DIR *directory = opendir(dir);
-        if(directory){
-            //Check every item inside directory
-            struct dirent *entry;
-            while((entry=readdir(directory))){
-                //If entry starts with the same as the input
-                if(!strncmp(entry->d_name,input,strlen(input))){
-
-                    char search[1024];
-                    snprintf(search,sizeof(search),"%s/%s",dir,entry->d_name);
-
-                    //If the search is an executable add to the entires array
-                    if(!access(search,F_OK)){
-
-                        entries.arguments = realloc(entries.arguments,(entries.count+1)*sizeof(char*));
-                        if(!entries.arguments){
-                            perror("Erorr allocating memory for entries array\n");
-                            exit(1);
-                        }
-                        entries.arguments[entries.count] = strdup(entry->d_name);
-                        if(!entries.arguments[entries.count]){
-                            perror("Error allocating memory for entry in entries array\n");
-                            exit(1);
-                        }
-                        entries.count++;
-                    }
-                }
-            }
-            closedir(directory);
-        }
-        dir = strtok(NULL,":");
-    }
-    free(path);
-    return entries;
-
-
-}

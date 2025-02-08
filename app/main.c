@@ -17,48 +17,45 @@ int main() {
     int stderr_fd = dup(fileno(stderr));
     // Flush after every printf
     setbuf(stdout, NULL);
-    // Uncomment this block to pass the first stage
+    //For the first input
     printf("$ ");
     
     //Deactivates cannonical mode of the terminal
     deactivateCannonMode();
 
-    //reads input
-    char *input = readInput();
+    //Reads the input by the user
+    char input[1024];
+    readInput(input);
 
     //Creates a dynamic array of arguments
-    Arguments args = arg_arrayer(input);
-
-    free(input);
+    Arguments args = {NULL,0};
+    arg_arrayer(&args,input);
+    int typeFlag = valid_command(args.arguments[0]);
+  
 
     //Checks if valid command is passed to input
-    char *temp = valid_command(args.arguments[0]);
+    if(typeFlag < 0){
+      printf("%s: command not found\n",args.arguments[0]);
+      continue;
+    }
 
     //Handling of the redirection commands
     redirection(&args);
 
     //Handles the commands if shell builtins
-    if(temp){
-      if(!strcmp(temp,"a shell builtin")){
-        command_handling(&args);
-      }
-      else if(strcmp(args.arguments[0],"\0")){ //Else executes the program listed in the PATH variable
-        free(temp);
-
-        //Adds NULL terminator to the argument array
-        args.arguments = realloc(args.arguments,(args.count+1)*sizeof(char*));
-        if(args.arguments == NULL){
-          printf("Error reallocating memory for arguments array (NULL terminator)\n");
-          exit(1);
-        }
-        args.arguments[args.count] = NULL;
-
-        program_execution(&args);
-      }
+    if(!typeFlag){
+      command_handling(&args);
     }
     else{
-      //Prints (input command): command not found
-      printf("%s: command not found\n",args.arguments[0]);
+      //Adds a NULL to the end of the argument array
+      args.arguments = realloc(args.arguments,(args.count + 1)*sizeof(char*));
+      if(!args.arguments){
+        perror("Error reallocating memory for NULL terminator of arguments array\n");
+        exit(1);
+      }
+      args.arguments[args.count] = NULL;
+
+      program_execution(&args);
     }
 
     //Bring the stdout back to the console

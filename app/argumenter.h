@@ -6,6 +6,6 @@
         int count;
     } Arguments;
 
-    Arguments arg_arrayer(char *input);
+    void arg_arrayer(Arguments *args,char *input);
 
 #endif

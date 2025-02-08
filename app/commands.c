@@ -11,6 +11,8 @@
 #define PWD "pwd"
 #define CD "cd"
 
+const char *builtin[5] = {"echo","type","exit","pwd","cd"};
+
 //Redirects the builtin commands
 void command_handling(Arguments *args){
 
@@ -54,23 +56,49 @@ void echo(Arguments *args){
 //Function for the type command
 void type(Arguments *args){
 
-    char *type;
+    //Handling if the second argument is empty
+    if(args->arguments[1]){
+        return;
+    }
 
-    for(int i = 1; i<args->count;i++){
-        if(!strcmp(args->arguments[i],"")){ //Handles if the second argument is empty
+    for(int i = 1; i<args->count; i++){
+        int typeFlag = valid_command(args->arguments[i]);
+        if(typeFlag < 0){
+            printf("%s not found\n",args->arguments[i]);
             continue;
         }
-        type = valid_command(args->arguments[i]);
-        if(type){
-            printf("%s is %s\n",args->arguments[i],type);
-            if(strcmp(type,"a shell builtin"))free(type);
+        else if(!typeFlag){
+            printf("%s is a shell builtin\n",args->arguments[i]);
+            continue;
         }
         else{
-            printf("%s: not found\n",args->arguments[i]);
+            char *type = path_checker(args->arguments[i]);
+            printf("%s is %s\n",args->arguments[i],type);
+            free(type);
+            continue;
         }
     }
 
     return;
+
+}
+
+int valid_command(char *arg){
+    char *type = NULL;
+    int builtinLen = sizeof(builtin)/sizeof(builtin[0]);
+
+    for(int i = 0; i<builtinLen; i++){
+        if(!strcmp(arg,builtin[i])){
+            return 0;
+        }
+    }
+    if((type = path_checker(arg))){
+        free(type);
+        return 1;
+    }
+    else{
+        return -1;
+    }
 }
 
 //Function for the exit command

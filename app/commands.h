@@ -6,6 +6,7 @@
     void command_handling(Arguments *args);
     void echo(Arguments *args);
     void type(Arguments *args);
+    int valid_command(char *arg);
     void exit_(Arguments *args);
     void pwd();
     void cd (char *dir);

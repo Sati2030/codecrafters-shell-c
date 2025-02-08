@@ -3,11 +3,14 @@
 #include "argumenter.h"
 #include "prog_interfacing.h"
 
+typedef Arguments SearchResults;
+
 void deactivateCannonMode();
-char *readInput();
-char *other_tab(char *input,int *count);
-char *complete_input(char *input, char *completion, int *count);
-char *backspace(char *input,int *count);
+void readInput(char *input);
+void other_tab(char *input,int *count);
+void complete_input(char *input, char *completion, int *count);
+void backspace(char *input,int *count);
+void get_matches(SearchResults *entries,char *input);
 void activateCannonMode();
 
 #endif

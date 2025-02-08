@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
 
 struct termios ogTerminal;
 
@@ -30,9 +31,8 @@ void deactivateCannonMode(){
 }
 
 //Reads the input from the terminal
-char *readInput(){
+void readInput(char *input){
 
-  char *input = NULL;
   char c;
   int i = 0;
 
@@ -40,43 +40,29 @@ char *readInput(){
 
     //Handles input of ENTER
     if(c == '\n'){
-      input = realloc(input,(i+1)*sizeof(char));
       printf("\n");
-      input[i] = '\0';
       break;
     }
 
     //Handles input of BACKSPACE
     if(c == 127){
-      input = backspace(input,&i);
+      backspace(input,&i);
       continue;
     }
     
     //Handles autocompletion
     if(c == 9){
       if(!strcmp(input,"ech")){ //Of Echo
-        printf("o ");
-        input = realloc(input,(i+3)*sizeof(char));
-        input[i++] = 'o';
-        input[i++] = ' ';
-        input[i] = '\0';
+        complete_input(input,"echo ",&i);
       }
       else if(!strcmp(input,"exi")){ //Of exit
-        printf("t ");
-        input = realloc(input,(i+3)*sizeof(char));
-        input[i++] = 't';
-        input[i++] = ' ';
-        input[i] = '\0';
+        complete_input(input,"exit ",&i);
       }
       else if(!strcmp(input,"typ")){ //Of type
-        printf("e ");
-        input = realloc(input,(i+3)*sizeof(char));
-        input[i++] = 'e';
-        input[i++] = ' ';
-        input[i] = '\0';
+        complete_input(input,"type ",&i);
       }
       else{
-        input = other_tab(input,&i);
+        other_tab(input,&i);
       }
       continue;
     }
@@ -84,34 +70,50 @@ char *readInput(){
     //If none of the special characters is pressed:
     printf("%c",c);
 
-    input = realloc(input,(i+2)*sizeof(char));
-
     input[i++] = c;
     input[i] = '\0';
 
   }
 
-  return input;
+  return;
 }
 
 //Handles the tab functionality if its not an in-built command
-char *other_tab(char *input,int *count){
+void other_tab(char *input,int *count){
   
-  //Creates an arguments dyanmic array to hold the results of the search
-  Arguments entries = get_matches(input);
+  //Creates a dyanmic array of matches
+  SearchResults entries = {NULL,0};
+  get_matches(&entries,input);
+
   char c; //Used for reading next character if there is multiple results
 
   //If there is only one command that can be autocompleted
   if(entries.count == 1){
-    input = complete_input(input,entries.arguments[0],count);
+    complete_input(input,entries.arguments[0],count);
+    printf(" ");
+    input[(*count)++] = ' ';
+    input[*count] = '\0';
   }
   else if(entries.count > 1){ //If there are multiple results
 
     for(int p = 0; p < entries.count ; p++){
-      Arguments temp = get_matches(entries.arguments[p]);
-      if(temp.count == entries.count){
-        complete_input(input,entries.arguments[p],count);
-        input = backspace(input,count);
+
+      char *comparator = entries.arguments[p];
+      int validFlag;
+
+      for(int w = 0; w < entries.count; w++){
+        if(w == p){ //Skips same entry
+          continue;
+        }
+        if(strncmp(comparator,entries.arguments[w],strlen(comparator))){ //If the comparator does not prefix another command
+          validFlag = 0;
+          break;
+        }
+        validFlag = 1;
+      }
+
+      if(validFlag){
+        complete_input(input,comparator,count);
         goto exit;
       }
     }
@@ -127,12 +129,11 @@ char *other_tab(char *input,int *count){
         printf("$ ");
         printf("%s",input);
       }
-      else if(c == 127){
-        input = backspace(input,count);
+      else if(c == 127){ //If backspace is pressed
+        backspace(input,count);
       }
       else{ //If another key is pressed
         printf("%c",c);
-        input = realloc(input,(*count + 2)*sizeof(char));
         input[(*count)++] = c;
         input[*count] = '\0';
       }
@@ -142,49 +143,96 @@ char *other_tab(char *input,int *count){
     printf("\a");
   }
 
-exit:
+  exit:
+
+  //Frees the entries
     for(int k = 0; k<entries.count;k++){
     free(entries.arguments[k]);
   }
   free(entries.arguments);
 
-  return input;
+  return;
+
+}
+
+//Function that handles getting functions for autocompletion
+void get_matches(SearchResults *entries, char *input){
+
+  //Initialize entries array and retrieve PATH
+  char *path = get_path();
+
+  //Tokenizes the PATH
+  char *dir = strtok(path,":");
+
+  //Checks every directory for matches of the prefix
+  while(dir){
+    //Open directory for check
+    DIR *directory = opendir(dir);
+    if(directory){
+      //Check every item inside directory
+      struct dirent *entry;
+      while((entry=readdir(directory))){
+        //If entry starts with the same as the input
+        if(!strncmp(entry->d_name,input,strlen(input))){
+
+          char search[1024];
+          snprintf(search,sizeof(search),"%s/%s",dir,entry->d_name);
+
+          //If the search is an executable add to the entires array
+          if(!access(search,F_OK)){
+
+            entries->arguments = realloc(entries->arguments,(entries->count+1)*sizeof(char*));
+            if(!entries->arguments){
+              perror("Erorr allocating memory for entries array\n");
+              exit(1);
+            }
+            entries->arguments[entries->count] = strdup(entry->d_name);
+            if(!entries->arguments[entries->count]){
+              perror("Error allocating memory for entry in entries array\n");
+              exit(1);
+            }
+            entries->count++;
+          }
+        }
+      }
+      closedir(directory);
+    }
+    dir = strtok(NULL,":");
+  }
+  free(path);
+  return;
 
 }
 
 //Function that handles autocompletion
-char *complete_input(char *input,char *completion,int *count){
-
+void complete_input(char *input,char *completion,int *count){
+ 
+  //Moves the pointer of the completion to after the input
   int ogInpLen = strlen(input);
   completion += ogInpLen;
+  //Starts filling the screen and input array
   int newCompLen = strlen(completion);
-  printf("%s ",completion);
-  input = realloc(input,(*count+newCompLen+1)*sizeof(char));
-  if(!input){
-    perror("Error allocating memory for input in autocompletion\n");
-    exit(1);
-  }
+  printf("%s",completion);
   for(int i = 0; i<newCompLen; i++){
     input[(*count)++] = completion[i];
   }
-  input[(*count)++] = ' ';
+  //Null terminates and returns completion pointer to original char
   input[*count] = '\0';
   completion -= ogInpLen;
 
-  return input;
+  return;
 
 }
 
 //Handling of backspacing a character
-char *backspace(char *input, int *count){
+void backspace(char *input, int *count){
   
   if(*count > 0){
-    input = realloc(input,(*count)*sizeof(char));
     printf("\b \b");
     input[--(*count)] = '\0';
   }
 
-  return input;
+  return;
 }
 
 //Restores original terminal settings
