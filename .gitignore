@@ -1,0 +1,9 @@
+#Codecrafters directory 
+.codecrafters
+
+#Codecrafters settings script
+codecrafters.yml
+
+#Debug files
+app/.vscode
+app/shell_debug.out.dSYM
