@@ -363,17 +363,14 @@ void backspace(char *input,int *cursor, int *count){
   if(*cursor > 0){
     printf("\b \b");
     if(*cursor < *count){
-      input[--(*cursor)] = ' ';
+      (*cursor)--;
       for(int i= *cursor; i < (*count); i++){
         input[i] = input[i+1];
+        printf("%c",input[i]);
       }
+      printf(" ");
       int row = getRow();
-      printf("\x1B[%d;%dH",row,(*count+3));
-      printf("\b \b");
-      (*count)--;
-      printf("\x1B[3G");
-      printf("%s",input);
-      printf("\x1B[%d;%dH",row,*cursor+3);
+      printf("\x1B[%d;%dH",row,(*cursor+3));
     }
     else{
       input[--(*count)] = '\0';
