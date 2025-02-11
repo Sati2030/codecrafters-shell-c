@@ -55,21 +55,8 @@ void arg_arrayer(Arguments *args,char *input){
 
             buffer[j] = '\0';
 
-            args->arguments = realloc(args->arguments,(args->count +1)* sizeof(char *));
-            if(args->arguments == NULL){
-                perror("Memory allocation failed (arguments)\n");
-                exit(1);
-            }
+            addToArray(args,buffer);
 
-            args->arguments[args->count] = malloc((strlen(buffer) + 1) * sizeof(char));
-            if(args->arguments[args->count] == NULL){
-                perror("Memory allocation failed argument\n");
-                exit(1);
-            }
-
-            strcpy(args->arguments[args->count],buffer);
-
-            args->count++;
             j = 0;
             continue;
         }
@@ -80,6 +67,23 @@ void arg_arrayer(Arguments *args,char *input){
         //Makes sure backslash is deactivated after taking in the next character
         bs_flag = 0;
     }
+
+    return;
+}
+
+void addToArray(Arguments *array,char *in){
+
+    array->arguments = realloc(array->arguments,(array->count+1)*sizeof(char*));
+    if(!array->arguments){
+        perror("Error reallocating dynamic array of Arguments\n");
+        exit(1);
+    }
+    array->arguments[array->count] = strdup(in);
+    if(!array->arguments[array->count]){
+        perror("Error reallocating entry in dynamic array of Arguments\n");
+        exit(1);
+    }
+    array->count++;
 
     return;
 }

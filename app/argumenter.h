@@ -7,5 +7,6 @@
     } Arguments;
 
     void arg_arrayer(Arguments *args,char *input);
+    void addToArray(Arguments *array,char *in);
 
 #endif
