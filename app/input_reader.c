@@ -81,9 +81,11 @@ void readInput(char *input){
       }
       else if(c[0] == '\x05'){
         cursor_handling(&cursorPos,&i,END);
+        continue;
       }
       else if(c[0] == '\x01'){
         cursor_handling(&cursorPos,&i,BEGINNING);
+        continue;
       }
 
       //Handles input of ENTER
