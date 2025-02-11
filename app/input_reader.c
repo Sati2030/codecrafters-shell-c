@@ -115,11 +115,8 @@ void readInput(char *input){
           cursorPos = i;
         }
         else{
-          int oldi = i;
           other_tab(input,&cursorPos,&i);
-          if(oldi < i){
-            cursorPos = i;
-          }
+          cursorPos = i;
         }
         continue;
       }
@@ -370,6 +367,10 @@ void get_matches(SearchResults *entries, char *input){
 
 //Function that handles autocompletion
 void complete_input(char *input,char *completion,int *count){
+
+  //Ensures cursos is at end of line
+  int row = getRow();
+  printf("\x1B[%d;%dH",row,(*count+3));
  
   //Moves the pointer of the completion to after the input
   int ogInpLen = strlen(input);
