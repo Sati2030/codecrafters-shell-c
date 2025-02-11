@@ -8,6 +8,8 @@
 
 #define FORWARD 1
 #define BACKWARD 0
+#define END 2
+#define BEGINNING 3
 
 struct termios ogTerminal;
 
@@ -77,6 +79,12 @@ void readInput(char *input){
         cursor_handling(&cursorPos,&i,BACKWARD);
         continue;
       }
+      else if(c[0] == '\x05'){
+        cursor_handling(&cursorPos,&i,END);
+      }
+      else if(c[0] == '\x01'){
+        cursor_handling(&cursorPos,&i,BEGINNING);
+      }
 
       //Handles input of ENTER
       if(c[0] == '\n'){
@@ -135,6 +143,9 @@ void readInput(char *input){
 //Handling of the cursor
 void cursor_handling(int *cursor,int *count, int action){
   
+  int row = getRow();
+
+  //Forward
   if(action == 1){
     if(*cursor == *count){
       return;
@@ -145,7 +156,8 @@ void cursor_handling(int *cursor,int *count, int action){
       return;
     }
   }
-  else{
+  //Backwards
+  else if(action == 0){
     if(*cursor == 0){
       return;
     }
@@ -154,6 +166,23 @@ void cursor_handling(int *cursor,int *count, int action){
       (*cursor)--;
       return;
     }
+  }
+  //End of line
+  else if(action == 2){
+    if(*cursor == *count){
+      return;
+    }
+    else{
+      *cursor = *count;
+      printf("\x1B[%d;%dH",row,(*cursor+3));
+      return;
+    }
+  }
+  //Beginning of line
+  else if(action == 3){
+    *cursor = 0;
+    printf("\x1B[%d;%dH",row,3);
+    return;
   }
 
 }
@@ -363,11 +392,11 @@ void backspace(char *input,int *cursor, int *count){
   if(*cursor > 0){
     printf("\b \b");
     if(*cursor < *count){
-      (*cursor)--;
-      for(int i= *cursor; i < (*count); i++){
+      for(int i= --(*cursor); i < *count; i++){
         input[i] = input[i+1];
         printf("%c",input[i]);
       }
+      (*count)--;
       printf(" ");
       int row = getRow();
       printf("\x1B[%d;%dH",row,(*cursor+3));
