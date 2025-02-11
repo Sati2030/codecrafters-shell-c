@@ -27,6 +27,11 @@ int main() {
     char input[1024] = {0};
     readInput(input);
 
+    //If input is empty continue
+    if(!strcmp(input,"")){
+      continue;
+    }
+
     //Creates a dynamic array of arguments
     Arguments args = {NULL,0};
     arg_arrayer(&args,input);
