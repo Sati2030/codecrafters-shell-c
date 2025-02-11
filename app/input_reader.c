@@ -66,10 +66,17 @@ void readInput(char *input){
         continue;
       }
     }
-    else if(nBytes == 1 && c[0] == '\x1B'){
-      continue;
-    }
     else if(nBytes == 1){
+
+      //If CTRL+F or CTRL+B
+      if(c[0] == '\x06'){
+        cursor_handling(&cursorPos,&i,FORWARD);
+        continue;
+      }
+      else if(c[0] == '\x02'){
+        cursor_handling(&cursorPos,&i,BACKWARD);
+        continue;
+      }
 
       //Handles input of ENTER
       if(c[0] == '\n'){
@@ -107,7 +114,7 @@ void readInput(char *input){
         continue;
       }
 
-
+      //If the user is typing before the end of the input
       if(cursorPos < i){
         moveInputRight(input,&cursorPos,&i);
       }
