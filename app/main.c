@@ -24,7 +24,7 @@ int main() {
     deactivateCannonMode();
 
     //Reads the input by the user
-    char input[1024];
+    char input[1024] = {0};
     readInput(input);
 
     //Creates a dynamic array of arguments
