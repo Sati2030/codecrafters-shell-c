@@ -42,6 +42,7 @@ void readInput(char *input){
   int count = 0;
   int cursorPos = 0;
   int nBytes;
+  input[0] = '\0'; //Makes sure that input is NULL terminated
 
   while((nBytes = read(STDIN_FILENO,c,sizeof(c))) > 0){
 
@@ -101,6 +102,7 @@ void readInput(char *input){
       }
       
       //Handles autocompletion
+
       if(c[0] == 9){
         if(!strncmp(input,"ech",3)){ //Of Echo
           complete_input(input,"echo ",&cursorPos,&count,0);
@@ -141,23 +143,13 @@ void readInput(char *input){
         continue;
       }
 
-
-      //If the user is typing before the end of the input
-      if(cursorPos < count){
-        moveInputRight(input,1,&cursorPos,&count);
-        printf("%c",c[0]);
-        input[cursorPos++] = c[0];
-        continue;
-      }
-
-      //If none of the special characters is pressed:
+      //If none of the special characters
+      moveInputRight(input,1,&cursorPos,&count);
       printf("%c",c[0]);
-      
       input[cursorPos++] = c[0];
-      input[++count] = '\0';
+      continue;
 
     }
-
   }
 
   return;
@@ -217,7 +209,7 @@ void moveInputRight(char *input,int n,int *cursor,int *count){
     input[i + n] = input[i];
   }
 
-  for(int i = *cursor; i< *cursor+n; i++){
+  for(int i = *cursor; i<*cursor+n; i++){
     input[i] = ' ';
   } 
   
@@ -322,19 +314,13 @@ void file_autocompletion(char *input, int *cursor, int *count, int fileNo){
   SearchResults files = {NULL,0};
 
   //Extract the set of chars to autocomplete
-  char *tk = get_token(input,fileNo);
-  
-  char token[128];
-
-  if(tk){
-    strcpy(token,tk);
-  }
-  else{
-    char *token = NULL;
-  }
+  char *token = get_token(input,fileNo);
   
   get_dir_entries(&files,token);
   
+  if(token){
+    free(token);
+  }
 
   if(files.count > 1){
     printf("\a");
@@ -349,9 +335,7 @@ void file_autocompletion(char *input, int *cursor, int *count, int fileNo){
     return;
   }
   else if(files.count == 1){
-
     complete_input(input,files.arguments[0],cursor,count,fileNo);
-
   }
 
 
@@ -398,10 +382,12 @@ void get_dir_entries(SearchResults *files,char *input){
   }
 
   while((entry = readdir(directory))){
+    //Ignores the . directories
     if(entry->d_name[0] == '.'){
       continue;
     }
-    if(input){
+    //If there is a prefix
+    else if(input){
       if(!strncmp(entry->d_name,input,strlen(input))){
         if(entry->d_type == DT_DIR){
           char add[64];
@@ -410,6 +396,7 @@ void get_dir_entries(SearchResults *files,char *input){
         }
       }
     }
+    //If the user is asking for all the direcotries
     else{
       if(entry->d_type == DT_DIR){
         char add[64];
@@ -418,6 +405,8 @@ void get_dir_entries(SearchResults *files,char *input){
       }
     }
   }
+
+  return;
 }
 
 //Function that handles getting functions for autocompletion
@@ -478,22 +467,16 @@ void get_matches(SearchResults *entries, char *input){
 void complete_input(char *input,char *completion,int *cursor, int *count, int argNo){
 
   char *token = get_token(input,argNo);
-  int tokenLen = strlen(token);
+  int tokenLen;
+  if(token){
+    tokenLen = strlen(token);
+  }
+  else{
+    tokenLen = 0;
+  }
 
   for(int i = *cursor; i<=*count; i++){
-    if(input[i] == '\0'){
-      moveCursor(cursor,i);
-      completion += tokenLen;
-      for(int j = 0; j<strlen(completion); j++){
-        input[(*cursor)++] = completion[j];
-        printf("%c",completion[j]);
-      }
-      input[*cursor] = '\0';
-      *count = *cursor;
-      completion -= tokenLen;
-      return;
-    }
-    else if(input[i] == ' '){
+    if(input[i] == '\0' || input[i] == ' '){
       moveCursor(cursor,i);
       completion += tokenLen;
       moveInputRight(input,strlen(completion),cursor,count);
@@ -501,8 +484,10 @@ void complete_input(char *input,char *completion,int *cursor, int *count, int ar
         input[(*cursor)++] = completion[j];
         printf("%c",completion[j]);
       }
-      input[*cursor] = ' ';
       completion -= tokenLen;
+      if(token){
+        free(token);
+      }
       return;
     }
   }
@@ -511,6 +496,7 @@ void complete_input(char *input,char *completion,int *cursor, int *count, int ar
 
 }
 
+//Gets the string that should be autocompleted (or modified)
 char *get_token(char *input,int argNo){
   char copy[1024];
   strcpy(copy,input);
@@ -519,14 +505,13 @@ char *get_token(char *input,int argNo){
 
   while(token){
     if(i == argNo){
-      break;
+      return strdup(token);
     }
     i++;
     token = strtok(NULL," ");
   }
 
-  return token;
-
+  return NULL;
 
 }
 
@@ -535,26 +520,20 @@ void backspace(char *input,int *cursor, int *count){
   
   if(*cursor > 0){
     printf("\b \b");
-    if(*cursor < *count){
-      for(int i= --(*cursor); i < *count; i++){
-        input[i] = input[i+1];
-        printf("%c",input[i]);
-      }
-      (*count)--;
-      printf(" ");
-      int row = getRow();
-      printf("\x1B[%d;%dH",row,(*cursor+3));
+    for(int i= --(*cursor); i < *count; i++){
+      input[i] = input[i+1];
+      printf("%c",input[i]);
     }
-    else{
-      input[--(*count)] = '\0';
-      (*cursor)--;
-    }
-
+    printf(" ");
+    (*count)--;
+    //printf(" ");
+    moveCursor(cursor,*cursor);
   }
 
   return;
 }
 
+//Moves the cursor to a specified location
 void moveCursor(int *cursor, int pos){
   int row = getRow();
   printf("\x1B[%d;%dH",row,pos+3);
