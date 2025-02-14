@@ -39,7 +39,7 @@ void deactivateCannonMode(){
 void readInput(char *input){
 
   char c[3];
-  int i = 0;
+  int count = 0;
   int cursorPos = 0;
   int nBytes;
 
@@ -53,10 +53,10 @@ void readInput(char *input){
           case 'A': break;
           case 'B': break;
           case 'C': 
-            cursor_handling(&cursorPos,&i,FORWARD);
+            cursor_handling(&cursorPos,&count,FORWARD);
             break;
           case 'D':
-            cursor_handling(&cursorPos,&i,BACKWARD);
+            cursor_handling(&cursorPos,&count,BACKWARD);
         }
         tcflush(STDIN_FILENO, TCIFLUSH);
         memset(c,0,sizeof(c));
@@ -72,19 +72,19 @@ void readInput(char *input){
 
       //CTRL+(A,B,E,A)
       if(c[0] == '\x06'){
-        cursor_handling(&cursorPos,&i,FORWARD);
+        cursor_handling(&cursorPos,&count,FORWARD);
         continue;
       }
       else if(c[0] == '\x02'){
-        cursor_handling(&cursorPos,&i,BACKWARD);
+        cursor_handling(&cursorPos,&count,BACKWARD);
         continue;
       }
       else if(c[0] == '\x05'){
-        cursor_handling(&cursorPos,&i,END);
+        cursor_handling(&cursorPos,&count,END);
         continue;
       }
       else if(c[0] == '\x01'){
-        cursor_handling(&cursorPos,&i,BEGINNING);
+        cursor_handling(&cursorPos,&count,BEGINNING);
         continue;
       }
 
@@ -96,38 +96,65 @@ void readInput(char *input){
 
       //Handles input of BACKSPACE
       if(c[0] == 127){              
-        backspace(input,&cursorPos,&i);
+        backspace(input,&cursorPos,&count);
         continue;
       }
       
       //Handles autocompletion
       if(c[0] == 9){
-        if(!strcmp(input,"ech")){ //Of Echo
-          complete_input(input,"echo ",&cursorPos,&i);
+        if(!strncmp(input,"ech",3)){ //Of Echo
+          complete_input(input,"echo ",&cursorPos,&count,0);
         }
-        else if(!strcmp(input,"exi")){ //Of exit
-          complete_input(input,"exit ",&cursorPos,&i);
+        else if(!strncmp(input,"exi",3)){ //Of exit
+          complete_input(input,"exit ",&cursorPos,&count,0);
         }
-        else if(!strcmp(input,"typ")){ //Of type
-          complete_input(input,"type ",&cursorPos,&i);
+        else if(!strncmp(input,"typ",3)){ //Of type
+          complete_input(input,"type ",&cursorPos,&count,0);
         }
-        else{ //Command autocompletion
-          other_tab(input,&cursorPos,&i);
+        else{ //File and PATH command autocompletion
+
+          int fileNo,fill = 0;
+
+          //Checks if the autocompletion should be for a file or a command
+          for(int i = 0; i<cursorPos; i++){
+            if(input[i] != ' '){
+              fill = 1;
+              continue;
+            }
+            else{
+              if(fill){
+                fileNo++;
+                fill = 0;
+              }
+            }
+          }
+
+          if(fileNo){ //If there is a space after the first set of chars in the string
+            file_autocompletion(input,&cursorPos,&count,fileNo);
+          }
+          else{ //If there is no space after then its a command
+            other_tab(input,&cursorPos,&count);
+          }
+
+
         }
-        
         continue;
       }
 
+
       //If the user is typing before the end of the input
-      if(cursorPos < i){
-        moveInputRight(input,&cursorPos,&i);
+      if(cursorPos < count){
+        moveInputRight(input,1,&cursorPos,&count);
+        printf("%c",c[0]);
+        input[cursorPos++] = c[0];
+        continue;
       }
 
       //If none of the special characters is pressed:
       printf("%c",c[0]);
       
       input[cursorPos++] = c[0];
-      input[++i] = '\0';
+      input[++count] = '\0';
 
     }
 
@@ -183,19 +210,24 @@ void cursor_handling(int *cursor,int *count, int action){
 
 }
 
-//Moves input to the right if the cursor is behind the end of the
-void moveInputRight(char *input,int *cursor,int *count){
+//Moves input to the right if the cursor is behind the end of the line
+void moveInputRight(char *input,int n,int *cursor,int *count){
 
-  int row = getRow();
-
-  for(int i = *count ; i > *cursor; i--){
-    input[i] = input[i-1];
+  for(int i = *count; i>= *cursor; i--){
+    input[i + n] = input[i];
   }
-  input[*cursor] = ' ';
+
+  for(int i = *cursor; i< *cursor+n; i++){
+    input[i] = ' ';
+  } 
   
-  printf("\x1B[3G");
-  printf("%s",input);
-  printf("\x1B[%d;%dH",row,(*cursor+3));
+  *count += n;
+
+  
+  printf("%s",input+*cursor);
+  moveCursor(cursor,*cursor);
+
+  return;
   
 }
 
@@ -210,11 +242,9 @@ void other_tab(char *input,int *cursor,int *count){
 
   //If there is only one command that can be autocompleted
   if(entries.count == 1){
-    complete_input(input,entries.arguments[0],cursor,count);
+    complete_input(input,entries.arguments[0],cursor,count,0);
     printf(" ");
-    input[(*count)++] = ' ';
-    input[*count] = '\0';
-    (*cursor)++;
+    input[(*cursor)++] = ' ';
   }
   //If there are multiple results
   else if(entries.count > 1){ 
@@ -238,7 +268,7 @@ void other_tab(char *input,int *cursor,int *count){
 
       //If the current comparator prefixes all other autcomplete options then chose
       if(validFlag){
-        complete_input(input,comparator,cursor,count);
+        complete_input(input,comparator,cursor,count,0);
         goto exit;
       }
     }
@@ -246,8 +276,7 @@ void other_tab(char *input,int *cursor,int *count){
     printf("\a");
     if(read(STDIN_FILENO,&c,1) > 0){
       if(c == 9){ //If tab is pressed again
-        int row = getRow();
-        printf("\x1B[%d;%dH",row,(*count+3)); //Ensures cursor is at end of line before new line
+        moveCursor(cursor,(*count+3));//Ensures cursor is at end of line before new line
         printf("\n");
         qsort(entries.arguments,entries.count,sizeof(char*),comparator_function);
         for(int i = 0; i < entries.count; i++){
@@ -256,15 +285,14 @@ void other_tab(char *input,int *cursor,int *count){
         printf("\n");
         printf("$ ");
         printf("%s",input);
-        row = getRow();
-        printf("\x1B[%d;%dH",row,(*cursor+3));
+        moveCursor(cursor,(*count+3));
       }
       else if(c == 127){ //If backspace is pressed
         backspace(input,cursor,count);
       }
       else{ //If another key is pressed
         if(*cursor < *count){
-          moveInputRight(input,cursor,count);
+          moveInputRight(input,1,cursor,count);
         }
         printf("%c",c);
         input[(*cursor)++] = c;
@@ -289,28 +317,40 @@ void other_tab(char *input,int *cursor,int *count){
 }
 
 //Handles the autcompetion of files
-/*void file_autocompletion(char *input, int *cursor, int*count){
+void file_autocompletion(char *input, int *cursor, int *count, int fileNo){
 
   SearchResults files = {NULL,0};
-  if(input[*count-1] == ' '){
-    get_dir_entries(&files,NULL);
-  }
-  else{
-    char *tok = strtok(input," ");
-    char *last;
-    while(tok){
-      last = tok;
-      tok = strtok(NULL," ");
-    }
-    get_dir_entries(&files,last);
-  }
 
-  //If there is only one match
-  if(files.count == 1){
-    complete_input(input,files.arguments[0],cursor,count);
+  //Extract the set of chars to autocomplete
+  char *tk = get_token(input,fileNo);
+  
+  char token[128];
+
+  if(tk){
+    strcpy(token,tk);
   }
   else{
+    char *token = NULL;
+  }
+  
+  get_dir_entries(&files,token);
+  
+
+  if(files.count > 1){
+    printf("\a");
+    moveCursor(cursor,*count);
     printf("\n");
+    for(int i = 0; i<files.count; i++){
+      printf("%s  ",files.arguments[i]);
+    }
+    printf("\n");
+    printf("$ %s",input);
+
+    return;
+  }
+  else if(files.count == 1){
+
+    complete_input(input,files.arguments[0],cursor,count,fileNo);
 
   }
 
@@ -321,7 +361,7 @@ void other_tab(char *input,int *cursor,int *count){
   free(files.arguments);
 
 
-}*/
+}
 
 //Gets the row the cursor is at
 int getRow(){
@@ -347,7 +387,7 @@ int getRow(){
 }
 
 //Function to add entries of a directory
-/*void get_dir_entries(SearchResults *files,char *input){
+void get_dir_entries(SearchResults *files,char *input){
   
   struct dirent *entry;
   DIR *directory = opendir(".");
@@ -358,18 +398,27 @@ int getRow(){
   }
 
   while((entry = readdir(directory))){
+    if(entry->d_name[0] == '.'){
+      continue;
+    }
     if(input){
-      if(strncmp(entry->d_name,input,sizeof(input))){
-        addToArray(files,entry->d_name);
+      if(!strncmp(entry->d_name,input,strlen(input))){
+        if(entry->d_type == DT_DIR){
+          char add[64];
+          snprintf(add,sizeof(add),"%s/",entry->d_name);
+          addToArray(files,add);
+        }
       }
     }
     else{
-      addToArray(files,entry->d_name);
+      if(entry->d_type == DT_DIR){
+        char add[64];
+        snprintf(add,sizeof(add),"%s/",entry->d_name);
+        addToArray(files,add);
+      }
     }
   }
 }
-*/
-
 
 //Function that handles getting functions for autocompletion
 void get_matches(SearchResults *entries, char *input){
@@ -426,29 +475,58 @@ void get_matches(SearchResults *entries, char *input){
 }
 
 //Function that handles autocompletion
-void complete_input(char *input,char *completion,int *cursor, int *count){
+void complete_input(char *input,char *completion,int *cursor, int *count, int argNo){
 
-  //Ensures cursor is at end of line
-  int row = getRow();
-  printf("\x1B[%d;%dH",row,(*count+3));
- 
-  //Moves the pointer of the completion to after the input
-  int ogInpLen = strlen(input);
-  completion += ogInpLen;
-  //Starts filling the screen and input array
-  int newCompLen = strlen(completion);
-  printf("%s",completion);
-  for(int i = 0; i<newCompLen; i++){
-    input[(*count)++] = completion[i];
+  char *token = get_token(input,argNo);
+  int tokenLen = strlen(token);
+
+  for(int i = *cursor; i<=*count; i++){
+    if(input[i] == '\0'){
+      moveCursor(cursor,i);
+      completion += tokenLen;
+      for(int j = 0; j<strlen(completion); j++){
+        input[(*cursor)++] = completion[j];
+        printf("%c",completion[j]);
+      }
+      input[*cursor] = '\0';
+      *count = *cursor;
+      completion -= tokenLen;
+      return;
+    }
+    else if(input[i] == ' '){
+      moveCursor(cursor,i);
+      completion += tokenLen;
+      moveInputRight(input,strlen(completion),cursor,count);
+      for(int j = 0; j<strlen(completion); j++){
+        input[(*cursor)++] = completion[j];
+        printf("%c",completion[j]);
+      }
+      input[*cursor] = ' ';
+      completion -= tokenLen;
+      return;
+    }
   }
-  //Null terminates and returns completion pointer to original char
-  input[*count] = '\0';
-  completion -= ogInpLen;
-
-  //Puts the cursor counter in the end of line
-  *cursor = *count;
 
   return;
+
+}
+
+char *get_token(char *input,int argNo){
+  char copy[1024];
+  strcpy(copy,input);
+  char *token = strtok(copy," ");
+  int i = 0;
+
+  while(token){
+    if(i == argNo){
+      break;
+    }
+    i++;
+    token = strtok(NULL," ");
+  }
+
+  return token;
+
 
 }
 
@@ -474,6 +552,13 @@ void backspace(char *input,int *cursor, int *count){
 
   }
 
+  return;
+}
+
+void moveCursor(int *cursor, int pos){
+  int row = getRow();
+  printf("\x1B[%d;%dH",row,pos+3);
+  *cursor = pos;
   return;
 }
 

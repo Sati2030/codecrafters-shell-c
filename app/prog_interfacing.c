@@ -23,11 +23,11 @@ void program_execution(Arguments *args){
         break;
         //If child process
         case 0:
-            fflush(stdout);
             if(execvp(prog,args->arguments) == -1){
                 perror("Error executing program \n");
                 _exit(1);
             }
+            fflush(stdout);
         break;
         //If fork fails
         case -1:
