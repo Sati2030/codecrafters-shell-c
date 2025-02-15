@@ -6,11 +6,6 @@
 #include <unistd.h>
 #include <dirent.h>
 
-#define FORWARD 1
-#define BACKWARD 0
-#define END 2
-#define BEGINNING 3
-
 struct termios ogTerminal;
 
 //Reads the input from the terminal
@@ -134,68 +129,6 @@ void readInput(char *input){
   return;
 }
 
-//Handling of the cursor
-void cursor_handling(int *cursor,int *count, int action){
-  
-  int row = getRow();
-
-  //Forward
-  if(action == 1){
-    if(*cursor == *count){
-      return;
-    }
-    else{
-      printf("\x1B[C");
-      (*cursor)++;
-      return;
-    }
-  }
-  //Backwards
-  else if(action == 0){
-    if(*cursor == 0){
-      return;
-    }
-    else{
-      printf("\x1B[D");
-      (*cursor)--;
-      return;
-    }
-  }
-  //End of line
-  else if(action == 2){
-    if(*cursor == *count){
-      return;
-    }
-    else{
-      *cursor = *count;
-      printf("\x1B[%d;%dH",row,(*cursor+3));
-      return;
-    }
-  }
-  //Beginning of line
-  else if(action == 3){
-    *cursor = 0;
-    printf("\x1B[%d;%dH",row,3);
-    return;
-  }
-
-}
-
-//Moves the cursor to a specified location
-void moveCursor(int *cursor, int count, int pos){
-  if(pos > count){
-    return;
-  }
-  if(pos < 0){
-    return;
-  }
-
-  int row = getRow();
-  printf("\x1B[%d;%dH",row,pos+3);
-  *cursor = pos;
-  return;
-}
-
 //Handling of backspacing a character
 void backspace(char *input,int *cursor, int *count){
   
@@ -262,8 +195,7 @@ void moveInputRight(char *input,int n,int *cursor,int *count){
 
 
 
-
-//Handles the tab functionality if its not an in-built command
+//Handles autocompletion of commands
 void other_tab(char *input,int *cursor,int *count){
   
   //Creates a dyanmic array of matches
@@ -348,7 +280,7 @@ void other_tab(char *input,int *cursor,int *count){
 
 }
 
-//Function that handles getting functions for autocompletion
+//Function that handles getting executables from PATH with input prefix
 void get_matches(SearchResults *entries, char *input){
 
   //Initialize entries array and retrieve PATH
@@ -404,7 +336,7 @@ void get_matches(SearchResults *entries, char *input){
 
 
 
-//Handles the autcompetion of files
+//Handles the autcompetion regarding current woring directory
 void file_autocompletion(char *input, int *cursor, int *count, int fileNo){
 
   SearchResults files = {NULL,0};
@@ -414,10 +346,12 @@ void file_autocompletion(char *input, int *cursor, int *count, int fileNo){
   
   get_dir_entries(&files,token);
   
+  //If there is something to autocomplete
   if(token){
     free(token);
   }
 
+  //If there are more than 1 aucompletions available
   if(files.count > 1){
     printf("\a");
     moveCursor(cursor,*count,*count);
@@ -430,11 +364,12 @@ void file_autocompletion(char *input, int *cursor, int *count, int fileNo){
 
     return;
   }
+  //If there is only one autompletion
   else if(files.count == 1){
     complete_input(input,files.arguments[0],cursor,count,fileNo);
   }
 
-
+  //Frees the dynamic array of search results on the directory
   for(int i = 0; i < files.count; i++){
     free(files.arguments[i]);
   }
@@ -484,11 +419,10 @@ void get_dir_entries(SearchResults *files,char *input){
 
 
 
-
-
 //Function that handles autocompletion
 void complete_input(char *input,char *completion,int *cursor, int *count, int argNo){
 
+  //Gets the token in the input that has to be autocompleted
   char *token = get_token(input,argNo);
   int tokenLen;
   if(token){
@@ -498,6 +432,7 @@ void complete_input(char *input,char *completion,int *cursor, int *count, int ar
     tokenLen = 0;
   }
 
+  //Autocompletion
   for(int i = *cursor; i<=*count; i++){
     if(input[i] == '\0' || input[i] == ' '){
       moveCursor(cursor,*count,i);
@@ -545,8 +480,6 @@ char *get_token(char *input,int argNo){
 int comparator_function(const void *a, const void *b){
   return strcmp(*(const char**)a,*(const char**)b);
 }
-
-
 
 //Deactivates cannonical mode for instant input reading
 void deactivateCannonMode(){
