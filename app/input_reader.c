@@ -13,28 +13,6 @@
 
 struct termios ogTerminal;
 
-//Deactivates cannonical mode for instant input reading
-void deactivateCannonMode(){
-  struct termios terminal;
-
-  if(tcgetattr(STDIN_FILENO, &ogTerminal) == -1){
-    perror("Error getting terminal attributes\n");
-    exit(1);
-  }
-
-  terminal = ogTerminal;
-
-  terminal.c_lflag &= ~(ICANON|ECHO|ISIG);
-
-  if(tcsetattr(STDIN_FILENO,TCSANOW,&terminal) == -1){
-    perror("Error setting terminal attributes\n");
-    exit(1);
-  }
-
-  return;
-
-}
-
 //Reads the input from the terminal
 void readInput(char *input){
 
@@ -54,10 +32,10 @@ void readInput(char *input){
           case 'A': break;
           case 'B': break;
           case 'C': 
-            cursor_handling(&cursorPos,&count,FORWARD);
+            moveCursor(&cursorPos,count,(cursorPos+1));
             break;
           case 'D':
-            cursor_handling(&cursorPos,&count,BACKWARD);
+            moveCursor(&cursorPos,count,(cursorPos-1));
         }
         tcflush(STDIN_FILENO, TCIFLUSH);
         memset(c,0,sizeof(c));
@@ -73,19 +51,19 @@ void readInput(char *input){
 
       //CTRL+(A,B,E,A)
       if(c[0] == '\x06'){
-        cursor_handling(&cursorPos,&count,FORWARD);
+        moveCursor(&cursorPos,count,(cursorPos+1));
         continue;
       }
       else if(c[0] == '\x02'){
-        cursor_handling(&cursorPos,&count,BACKWARD);
+        moveCursor(&cursorPos,count,(cursorPos-1));
         continue;
       }
       else if(c[0] == '\x05'){
-        cursor_handling(&cursorPos,&count,END);
+        moveCursor(&cursorPos,count,count);
         continue;
       }
       else if(c[0] == '\x01'){
-        cursor_handling(&cursorPos,&count,BEGINNING);
+        moveCursor(&cursorPos,count,0);
         continue;
       }
 
@@ -115,7 +93,8 @@ void readInput(char *input){
         }
         else{ //File and PATH command autocompletion
 
-          int fileNo,fill = 0;
+          int fileNo = 0;
+          int fill = 0;
 
           //Checks if the autocompletion should be for a file or a command
           for(int i = 0; i<cursorPos; i++){
@@ -202,6 +181,62 @@ void cursor_handling(int *cursor,int *count, int action){
 
 }
 
+//Moves the cursor to a specified location
+void moveCursor(int *cursor, int count, int pos){
+  if(pos > count){
+    return;
+  }
+  if(pos < 0){
+    return;
+  }
+
+  int row = getRow();
+  printf("\x1B[%d;%dH",row,pos+3);
+  *cursor = pos;
+  return;
+}
+
+//Handling of backspacing a character
+void backspace(char *input,int *cursor, int *count){
+  
+  if(*cursor > 0){
+    printf("\b \b");
+    for(int i= --(*cursor); i < *count; i++){
+      input[i] = input[i+1];
+      printf("%c",input[i]);
+    }
+    printf(" ");
+    (*count)--;
+    //printf(" ");
+    moveCursor(cursor,*count,*cursor);
+  }
+
+  return;
+}
+
+//Gets the row the cursor is at
+int getRow(){
+  char buf[16];
+  int j = 0;
+  int row = -1;
+
+  tcflush(STDIN_FILENO, TCIFLUSH);
+  write(STDOUT_FILENO,"\x1B[6n",4);
+  while(j < sizeof(buf) -1){
+    if(read(STDIN_FILENO,&buf[j],1) != 1){
+      break;
+    }
+    if(buf[j]=='R'){
+      break;
+    }
+    j++;
+  }
+  buf[j] = '\0';
+  sscanf(buf,"\x1B[%d",&row);
+  tcflush(STDIN_FILENO,TCIFLUSH);
+  return row;
+}
+
 //Moves input to the right if the cursor is behind the end of the line
 void moveInputRight(char *input,int n,int *cursor,int *count){
 
@@ -209,19 +244,24 @@ void moveInputRight(char *input,int n,int *cursor,int *count){
     input[i + n] = input[i];
   }
 
-  for(int i = *cursor; i<*cursor+n; i++){
-    input[i] = ' ';
+  if(*cursor < *count){
+    for(int i = *cursor; i<*cursor+n; i++){
+      input[i] = ' ';
+    } 
   } 
   
   *count += n;
 
   
   printf("%s",input+*cursor);
-  moveCursor(cursor,*cursor);
+  moveCursor(cursor,*count,*cursor);
 
   return;
   
 }
+
+
+
 
 //Handles the tab functionality if its not an in-built command
 void other_tab(char *input,int *cursor,int *count){
@@ -268,7 +308,7 @@ void other_tab(char *input,int *cursor,int *count){
     printf("\a");
     if(read(STDIN_FILENO,&c,1) > 0){
       if(c == 9){ //If tab is pressed again
-        moveCursor(cursor,(*count+3));//Ensures cursor is at end of line before new line
+        moveCursor(cursor,*count,(*count+3));//Ensures cursor is at end of line before new line
         printf("\n");
         qsort(entries.arguments,entries.count,sizeof(char*),comparator_function);
         for(int i = 0; i < entries.count; i++){
@@ -277,7 +317,7 @@ void other_tab(char *input,int *cursor,int *count){
         printf("\n");
         printf("$ ");
         printf("%s",input);
-        moveCursor(cursor,(*count+3));
+        moveCursor(cursor,*count,(*count+3));
       }
       else if(c == 127){ //If backspace is pressed
         backspace(input,cursor,count);
@@ -306,107 +346,6 @@ void other_tab(char *input,int *cursor,int *count){
 
   return;
 
-}
-
-//Handles the autcompetion of files
-void file_autocompletion(char *input, int *cursor, int *count, int fileNo){
-
-  SearchResults files = {NULL,0};
-
-  //Extract the set of chars to autocomplete
-  char *token = get_token(input,fileNo);
-  
-  get_dir_entries(&files,token);
-  
-  if(token){
-    free(token);
-  }
-
-  if(files.count > 1){
-    printf("\a");
-    moveCursor(cursor,*count);
-    printf("\n");
-    for(int i = 0; i<files.count; i++){
-      printf("%s  ",files.arguments[i]);
-    }
-    printf("\n");
-    printf("$ %s",input);
-
-    return;
-  }
-  else if(files.count == 1){
-    complete_input(input,files.arguments[0],cursor,count,fileNo);
-  }
-
-
-  for(int i = 0; i < files.count; i++){
-    free(files.arguments[i]);
-  }
-  free(files.arguments);
-
-
-}
-
-//Gets the row the cursor is at
-int getRow(){
-  char buf[16];
-  int j = 0;
-  int row = -1;
-
-  tcflush(STDIN_FILENO, TCIFLUSH);
-  write(STDOUT_FILENO,"\x1B[6n",4);
-  while(j < sizeof(buf) -1){
-    if(read(STDIN_FILENO,&buf[j],1) != 1){
-      break;
-    }
-    if(buf[j]=='R'){
-      break;
-    }
-    j++;
-  }
-  buf[j] = '\0';
-  sscanf(buf,"\x1B[%d",&row);
-  tcflush(STDIN_FILENO,TCIFLUSH);
-  return row;
-}
-
-//Function to add entries of a directory
-void get_dir_entries(SearchResults *files,char *input){
-  
-  struct dirent *entry;
-  DIR *directory = opendir(".");
-
-  if(directory == NULL){
-    perror("Error opening cwd\n");
-    exit(1);
-  }
-
-  while((entry = readdir(directory))){
-    //Ignores the . directories
-    if(entry->d_name[0] == '.'){
-      continue;
-    }
-    //If there is a prefix
-    else if(input){
-      if(!strncmp(entry->d_name,input,strlen(input))){
-        if(entry->d_type == DT_DIR){
-          char add[64];
-          snprintf(add,sizeof(add),"%s/",entry->d_name);
-          addToArray(files,add);
-        }
-      }
-    }
-    //If the user is asking for all the direcotries
-    else{
-      if(entry->d_type == DT_DIR){
-        char add[64];
-        snprintf(add,sizeof(add),"%s/",entry->d_name);
-        addToArray(files,add);
-      }
-    }
-  }
-
-  return;
 }
 
 //Function that handles getting functions for autocompletion
@@ -463,6 +402,90 @@ void get_matches(SearchResults *entries, char *input){
 
 }
 
+
+
+//Handles the autcompetion of files
+void file_autocompletion(char *input, int *cursor, int *count, int fileNo){
+
+  SearchResults files = {NULL,0};
+
+  //Extract the set of chars to autocomplete
+  char *token = get_token(input,fileNo);
+  
+  get_dir_entries(&files,token);
+  
+  if(token){
+    free(token);
+  }
+
+  if(files.count > 1){
+    printf("\a");
+    moveCursor(cursor,*count,*count);
+    printf("\n");
+    for(int i = 0; i<files.count; i++){
+      printf("%s  ",files.arguments[i]);
+    }
+    printf("\n");
+    printf("$ %s",input);
+
+    return;
+  }
+  else if(files.count == 1){
+    complete_input(input,files.arguments[0],cursor,count,fileNo);
+  }
+
+
+  for(int i = 0; i < files.count; i++){
+    free(files.arguments[i]);
+  }
+  free(files.arguments);
+
+
+}
+
+//Function to add entries of a directory
+void get_dir_entries(SearchResults *files,char *input){
+  
+  struct dirent *entry;
+  DIR *directory = opendir(".");
+
+  if(directory == NULL){
+    perror("Error opening cwd\n");
+    exit(1);
+  }
+
+  while((entry = readdir(directory))){
+    //Ignores the . directories
+    if(entry->d_name[0] == '.'){
+      continue;
+    }
+    //If there is a prefix
+    else if(input){
+      if(!strncmp(entry->d_name,input,strlen(input))){
+        if(entry->d_type == DT_DIR){
+          char add[64];
+          snprintf(add,sizeof(add),"%s/",entry->d_name);
+          addToArray(files,add);
+        }
+      }
+    }
+    //If the user is asking for all the direcotries
+    else{
+      if(entry->d_type == DT_DIR){
+        char add[64];
+        snprintf(add,sizeof(add),"%s/",entry->d_name);
+        addToArray(files,add);
+      }
+    }
+  }
+
+  return;
+}
+
+
+
+
+
 //Function that handles autocompletion
 void complete_input(char *input,char *completion,int *cursor, int *count, int argNo){
 
@@ -477,7 +500,7 @@ void complete_input(char *input,char *completion,int *cursor, int *count, int ar
 
   for(int i = *cursor; i<=*count; i++){
     if(input[i] == '\0' || input[i] == ' '){
-      moveCursor(cursor,i);
+      moveCursor(cursor,*count,i);
       completion += tokenLen;
       moveInputRight(input,strlen(completion),cursor,count);
       for(int j = 0; j<strlen(completion); j++){
@@ -515,35 +538,36 @@ char *get_token(char *input,int argNo){
 
 }
 
-//Handling of backspacing a character
-void backspace(char *input,int *cursor, int *count){
-  
-  if(*cursor > 0){
-    printf("\b \b");
-    for(int i= --(*cursor); i < *count; i++){
-      input[i] = input[i+1];
-      printf("%c",input[i]);
-    }
-    printf(" ");
-    (*count)--;
-    //printf(" ");
-    moveCursor(cursor,*cursor);
-  }
 
-  return;
-}
 
-//Moves the cursor to a specified location
-void moveCursor(int *cursor, int pos){
-  int row = getRow();
-  printf("\x1B[%d;%dH",row,pos+3);
-  *cursor = pos;
-  return;
-}
 
 //Comparator function for sorting
 int comparator_function(const void *a, const void *b){
   return strcmp(*(const char**)a,*(const char**)b);
+}
+
+
+
+//Deactivates cannonical mode for instant input reading
+void deactivateCannonMode(){
+  struct termios terminal;
+
+  if(tcgetattr(STDIN_FILENO, &ogTerminal) == -1){
+    perror("Error getting terminal attributes\n");
+    exit(1);
+  }
+
+  terminal = ogTerminal;
+
+  terminal.c_lflag &= ~(ICANON|ECHO|ISIG);
+
+  if(tcsetattr(STDIN_FILENO,TCSANOW,&terminal) == -1){
+    perror("Error setting terminal attributes\n");
+    exit(1);
+  }
+
+  return;
+
 }
 
 //Restores original terminal settings

@@ -14,7 +14,7 @@ void backspace(char *input,int *cursor,int *count);
 void cursor_handling(int *cursor,int *count, int action);
 void moveInputRight(char *input,int n,int *cursor,int *count);
 int getRow();
-void moveCursor(int *cursor, int pos);
+void moveCursor(int *cursor,int count, int pos);
 char *get_token(char *input, int argNo);
 void get_matches(SearchResults *entries,char *input);
 void get_dir_entries(SearchResults *files,char *input);
