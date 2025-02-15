@@ -193,7 +193,20 @@ void moveInputRight(char *input,int n,int *cursor,int *count){
   
 }
 
+//Moves the cursor to specified pos
+void moveCursor(int *cursor,int count, int pos){
+  if(pos > count){ //If its after the length of the input
+    return;
+  }
+  else if(pos < 0){ //If its less than 0
+    return;
+  }
 
+  int row = getRow();
+  printf("\x1B[%d;%dH",row,pos+3);
+  *cursor = pos;
+  return;
+}
 
 //Handles autocompletion of commands
 void other_tab(char *input,int *cursor,int *count){
