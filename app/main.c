@@ -25,8 +25,6 @@ int main() {
     //Deactivates cannonical mode of the terminal
     deactivateCannonMode();
 
-    printf("hello\n");
-
     //Reads the input by the user
     char input[1024] = {0};
     readInput(input);
