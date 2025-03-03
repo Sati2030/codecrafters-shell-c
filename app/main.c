@@ -11,6 +11,8 @@
 
 int main() {
 
+  system("clear");
+
   while(1){
     //Get the original stdout and stderr file descriptor
     int stdout_fd = dup(fileno(stdout));
@@ -22,6 +24,8 @@ int main() {
     
     //Deactivates cannonical mode of the terminal
     deactivateCannonMode();
+
+    printf("hello\n");
 
     //Reads the input by the user
     char input[1024] = {0};
